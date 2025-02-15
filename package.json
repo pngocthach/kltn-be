@@ -2,6 +2,7 @@
   "name": "kltn-be",
   "version": "1.0.0",
   "main": "index.ts",
+  "type": "module",
   "scripts": {
     "dev": "tsx watch --clear-screen=false src/index.ts | pino-pretty",
     "build": "tsup",
@@ -12,11 +13,17 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@types/cors": "^2.8.17",
+    "@zodyac/zod-mongoose": "^3.2.0",
     "better-auth": "^1.1.18",
-    "express": "^4.21.2"
+    "cors": "^2.8.5",
+    "express": "^5.0.1",
+    "mongoose": "^8.10.0"
   },
   "devDependencies": {
     "@types/express": "^5.0.0",
+    "dotenv": "^16.4.7",
+    "envalid": "^8.0.0",
     "pino": "^9.6.0",
     "pino-pretty": "^13.0.0",
     "tsup": "^8.3.6",
@@ -24,15 +31,5 @@
     "typescript": "^5.7.3",
     "vite-tsconfig-paths": "^5.1.4",
     "vitest": "^3.0.5"
-  },
-  "tsup": {
-    "entry": [
-      "src",
-      "!src/**/__tests__/**",
-      "!src/**/*.test.*"
-    ],
-    "splitting": false,
-    "sourcemap": true,
-    "clean": true
   }
 }
