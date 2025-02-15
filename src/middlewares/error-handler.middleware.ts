@@ -1,4 +1,5 @@
 import { NextFunction, Request, Response } from "express";
+import createHttpError from "http-errors";
 
 export default function errorHandler(
   error: unknown,
@@ -13,7 +14,12 @@ export default function errorHandler(
     return;
   }
 
-  res.status(500).json({
-    message: "Internal server error",
-  });
+  let statusCode = 500;
+  let message = "Internal server error";
+  if (error instanceof createHttpError.HttpError) {
+    statusCode = error.statusCode;
+    message = error.message;
+  }
+
+  res.status(statusCode).json({ message });
 }
