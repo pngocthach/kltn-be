@@ -20,7 +20,7 @@ export const validateObjectId = (
 const validate = (schema: ZodSchema<any>) => {
   return (req: Request, res: Response, next: NextFunction): any => {
     try {
-      schema.parse(req.body);
+      req.body = schema.parse(req.body);
       next();
     } catch (error) {
       if (error instanceof ZodError) {
