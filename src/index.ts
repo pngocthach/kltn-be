@@ -13,6 +13,8 @@ import { routeNotFoundMiddleware } from "./middlewares/route-not-found.middlewar
 import { extendZod } from "@zodyac/zod-mongoose";
 import { z } from "zod";
 import authorRoute from "./api/author/author.route";
+import affiliationRoute from "./api/affiliation/affiliation.route";
+import articleRoute from "./api/article/crawl";
 
 const app = express();
 const port = env.PORT;
@@ -32,7 +34,9 @@ app.all(/\/api\/auth\/.*/, toNodeHandler(auth));
 // Mount express json middleware after Better Auth handler
 // or only apply it to routes that don't interact with Better Auth
 app.use(express.json());
-app.use("/api", authorRoute);
+app.use("/api", authMiddleware, authorRoute);
+app.use("/api/affiliation", authMiddleware, affiliationRoute);
+app.use("/api/article", articleRoute);
 
 app.get("/", (req, res) => {
   res.send("Hello World!");
