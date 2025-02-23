@@ -5,7 +5,7 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "concurrently --kill-others-on-fail \"cd packages/server && yarn dev\"  \"cd packages/web && yarn dev\""
+    "dev": "concurrently --kill-others-on-fail \"yarn workspace @kltn/server dev\"  \"yarn workspace @kltn/web dev\""
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
