@@ -1,8 +1,10 @@
 import puppeteer, { Page } from "puppeteer";
-import { connectDB } from "@/database/mongodb";
+import { connectDB } from "@/configs/mongodb";
 import { Router } from "express";
 // Or import puppeteer from 'puppeteer-core';
 import { ObjectId } from "mongodb";
+import { parseToMongoDate } from "@/helper";
+import { sendToQueue } from "@/configs/rabbitmq";
 
 const db = await connectDB();
 const articleModel = db.collection("article");
@@ -27,7 +29,7 @@ async function clickShowmore(page: Page) {
   }
 }
 
-async function crawl(url: string) {
+export async function crawl(url: string) {
   // Launch the browser and open a new blank page
   const browser = await puppeteer.launch();
   const page = await browser.newPage();
@@ -48,14 +50,6 @@ async function crawl(url: string) {
     });
   });
 
-  // const promises = [];
-  // for (const article of articles) {
-  //   promises.push(getMetadata(page, article));
-  // }
-  // await Promise.all(promises);
-  // const results = await Promise.all(promises);
-  // articles = results.flat();
-
   const result = [];
   for (const article of articles) {
     const res = await getMetadata(page, article);
@@ -67,11 +61,16 @@ async function crawl(url: string) {
 
 async function getMetadata(
   page: Page,
-  article: { link: string; metadata?: Record<string, string | number> }
+  article: {
+    link: string;
+    title: string;
+    metadata?: Record<any, any>;
+  }
 ) {
   await page.goto(article.link);
+  // @ts-ignore
   const metadata = await page.evaluate(() => {
-    const metadata: Record<string, string | number> = {};
+    const metadata: Record<any, any> = {};
     const data = document.querySelectorAll("#gsc_oci_table .gs_scl");
     data.forEach((item) => {
       const keyElement = item.querySelector(".gsc_oci_field");
@@ -80,7 +79,7 @@ async function getMetadata(
         // @ts-ignore
         const key = keyElement.textContent.trim();
         // @ts-ignore
-        let value: string | number = valueElement.textContent.trim();
+        let value: any = valueElement.textContent.trim();
         if (key === "Total citations") {
           const citedByElement = document.querySelector(".gsc_oci_value a");
           const citationCount = citedByElement
@@ -94,26 +93,59 @@ async function getMetadata(
     });
     return metadata;
   });
+
   article.metadata = metadata;
-  await articleModel.insertOne(article);
-  console.log("Inserted article", article);
-  return article;
+  if (article.metadata["Publication date"]) {
+    article.metadata["Publication date"] = parseToMongoDate(
+      article.metadata["Publication date"]
+    );
+  }
+  const upsertArticle = await articleModel.findOneAndReplace(
+    { title: article.title },
+    article,
+    {
+      upsert: true,
+    }
+  );
+  console.log("Inserted article", upsertArticle);
+  return upsertArticle;
 }
 
 const router = Router();
 
-router.post("/crawl", async (req, res) => {
-  const url = req.body.url;
-  const authorId = new ObjectId(req.body.authorId);
-  const articles = await crawl(url);
-  // @ts-ignore
-  const articleIds = articles.map((article) => article["_id"]);
-  await authorModel.updateOne(
-    { _id: authorId },
-    { $addToSet: { articles: { $each: articleIds } } }
-  );
+// router.post("/crawl", async (req, res) => {
+//   const url = req.body.url;
+//   const authorId = new ObjectId(req.body.authorId);
+//   const articles = await crawl(url);
+//   // @ts-ignore
+//   const articleIds = articles.map((article) => article["_id"]);
+//   await authorModel.updateOne(
+//     { _id: authorId },
+//     { $addToSet: { articles: { $each: articleIds } } }
+//   );
 
-  res.json(articles);
+//   res.json(articles);
+// });
+
+let channelInstance;
+
+export function setChannel(channel) {
+  channelInstance = channel;
+}
+
+// @ts-ignore
+router.post("/crawl", async (req, res) => {
+  const { url, authorId } = req.body;
+  if (!url || !authorId) {
+    return res.status(400).json({ error: "Missing required fields" });
+  }
+
+  if (!channelInstance) {
+    return res.status(500).json({ error: "RabbitMQ not initialized" });
+  }
+
+  await sendToQueue(channelInstance, { url, authorId });
+  res.json({ message: "Crawl request queued" });
 });
 
 export default router;

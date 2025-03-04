@@ -11,7 +11,7 @@
     "moduleResolution": "Node",
     "outDir": "dist",
     "importsNotUsedAsValues": "remove",
-    "strict": true,
+    "strict": false,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,

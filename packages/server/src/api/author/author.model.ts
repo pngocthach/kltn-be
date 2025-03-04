@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { connectDB } from "@/database/mongodb";
+import { connectDB } from "@/configs/mongodb";
 import { WithId } from "mongodb";
 
 export const authorSchema = z.object({

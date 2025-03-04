@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { connectDB } from "@/database/mongodb";
+import { connectDB } from "@/configs/mongodb";
 import { ObjectId, WithId } from "mongodb";
 
 export const affiliationSchema = z.object({

@@ -1,4 +1,4 @@
-import { connectDB } from "@/database/mongodb";
+import { connectDB } from "@/configs/mongodb";
 import { User } from "better-auth/types";
 import { WithId } from "mongodb";
 
