@@ -5,7 +5,8 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "concurrently --kill-others-on-fail \"yarn workspace @kltn/server dev\"  \"yarn workspace @kltn/web dev\""
+    "debug-server": "yarn workspace @kltn/server debug",
+    "dev": "concurrently --kill-others-on-fail -n \"SERVER,WEB\" -c \"bgBlue.bold,bgMagenta.bold\" \"yarn workspace @kltn/server dev\" \"yarn workspace @kltn/web dev\""
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
