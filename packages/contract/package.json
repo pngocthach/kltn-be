@@ -1,10 +1,17 @@
 {
   "name": "@kltn/contract",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "index.ts",
   "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "tsup"
+  },
   "dependencies": {
     "@ts-rest/core": "^3.52.0",
     "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "tsup": "^8.3.6"
   }
 }

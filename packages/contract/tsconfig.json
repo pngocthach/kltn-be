@@ -1,0 +1,11 @@
+{
+    "compilerOptions": {
+        "moduleResolution": "node",
+        "baseUrl": "./",
+        "paths": {
+            "@kltn/server/*": [
+                "../packages/server/src/*"
+            ]
+        }
+    }
+}

@@ -1,40 +1,20 @@
 import { initContract } from "@ts-rest/core";
+import { articleContract } from "./api/article";
 import { z } from "zod";
 
 const c = initContract();
-export const contract = c.router({
-  createPost: {
+const videoContract = c.router({
+  transcribeVideo: {
     method: "POST",
-    path: "/posts",
-    //     ^ Note! This is the full path on the server, not just the sub-path of a route
+    path: "/transcribe",
     responses: {
-      201: c.type<any>(),
+      200: c.type<{ transcript: string }>(),
     },
     body: z.object({
-      title: z.string(),
-      content: z.string(),
-      published: z.boolean().optional(),
-      description: z.string().optional(),
+      videoUrl: z.string(),
     }),
-    summary: "Create a post",
-    metadata: { role: "user" } as const,
-  },
-
-  getPosts: {
-    method: "GET",
-    path: "/posts",
-    responses: {
-      200: c.type<{ posts: any[]; total: number }>(),
-    },
-    headers: z.object({
-      pagination: z.string().optional(),
-    }),
-    query: z.object({
-      take: z.string().transform(Number).optional(),
-      skip: z.string().transform(Number).optional(),
-      search: z.string().optional(),
-    }),
-    summary: "Get all posts",
-    metadata: { role: "guest" } as const,
+    summary: "Transcribe YouTube video by videoUrl",
   },
 });
+
+export { videoContract, articleContract, c };
