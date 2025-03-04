@@ -17,10 +17,7 @@ const AffiliationTree: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [editingAffiliation, setEditingAffiliation] =
     useState<Affiliation | null>(null);
-  const [newAffiliation, setNewAffiliation] = useState<Affiliation>({
-    _id: "",
-    name: "",
-  });
+
   const [creatingChild, setCreatingChild] = useState<string | null>(null); // Track which item is having a child created
   const [newChildAffiliation, setNewChildAffiliation] = useState<Affiliation>({
     _id: "",

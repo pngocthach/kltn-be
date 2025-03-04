@@ -1,13 +1,32 @@
 import { createBrowserRouter } from "react-router-dom";
-import { HomePage, NavBar } from "./page/Home-page";
+import { NavBar } from "./page/Home-page";
 import LoginPage from "./page/Login-page";
-import AffiliationTree from "./components/affiliation";
+import { AffiliationTree } from "./components/affiliations/affiliation-tree";
 import AffiliationDetail from "./components/affiliation-detail";
+import Layout from "./page/Layout";
+import { Dashboard } from "./components/dashboard";
+import { ArticlePieChart } from "./components/charts/pie-chart";
+import AffiliationsPage from "./page/Affiliations-page";
+import AuthorsPage from "./page/Author-page";
 
 export const router = createBrowserRouter([
   {
     path: "/",
-    element: <HomePage />,
+    element: (
+      <Layout>
+        <Dashboard>
+          <></>
+        </Dashboard>
+      </Layout>
+    ),
+  },
+  {
+    path: "/pie-chart",
+    element: (
+      <Layout>
+        <ArticlePieChart />
+      </Layout>
+    ),
   },
   {
     path: "/login",
@@ -21,10 +40,9 @@ export const router = createBrowserRouter([
   {
     path: "/affiliations", // Path for the AffiliationTree component
     element: (
-      <div style={{ margin: "20px" }}>
-        <NavBar />
-        <AffiliationTree />
-      </div>
+      <Layout>
+        <AffiliationsPage></AffiliationsPage>,
+      </Layout>
     ),
   },
   {
@@ -34,6 +52,14 @@ export const router = createBrowserRouter([
         <NavBar />
         <AffiliationDetail />
       </div>
+    ),
+  },
+  {
+    path: "/authors",
+    element: (
+      <Layout>
+        <AuthorsPage />
+      </Layout>
     ),
   },
   {
