@@ -1,0 +1,81 @@
+import { initContract } from "@ts-rest/core";
+import { z, ZodAny } from "zod";
+
+const c = initContract();
+
+export const AuthorResponseSchema = z.object({
+  _id: z.any(),
+  name: z.string(),
+  url: z.string().url(), // Ensures it's a valid URL
+  createdAt: z.date(), // Ensures proper datetime format
+  updatedAt: z.date(),
+  schedule: z.number().optional(),
+  articles: z.array(z.string()), // Array of article IDs (strings)
+  affiliation: z.array(z.string()), // Array of affiliations (strings)
+});
+export type AuthorResponse = z.infer<typeof AuthorResponseSchema>;
+
+export const authorSchema = z.object({
+  name: z.string(),
+  url: z.string().url(), // Ensures it's a valid URL
+  createdAt: z.date(), // Ensures proper datetime format
+  updatedAt: z.date(),
+  articles: z.array(z.string()), // Array of article IDs (strings)
+  affiliation: z.any(),
+  schedule: z.number().optional(),
+});
+export type Author = z.infer<typeof authorSchema>;
+
+const CreateAuthorDto = authorSchema.pick({
+  name: true,
+  url: true,
+  affiliation: true,
+});
+export type CreateAuthorDto = z.infer<typeof CreateAuthorDto>;
+
+export const authorContract = c.router(
+  {
+    getAuthors: {
+      method: "GET",
+      path: "authors",
+      responses: {
+        200: c.type<AuthorResponse[]>(),
+      },
+    },
+
+    createAuthor: {
+      method: "POST",
+      path: "authors",
+      body: CreateAuthorDto,
+      responses: {
+        201: c.type<AuthorResponse>(),
+        404: c.type<{ error: string }>(),
+      },
+    },
+
+    editAuthor: {
+      method: "PATCH",
+      path: "authors/:id",
+      body: AuthorResponseSchema.omit({
+        createdAt: true,
+        updatedAt: true,
+        _id: true,
+      }).partial(),
+      responses: {
+        200: c.type<AuthorResponse>(),
+      },
+    },
+
+    deleteAuthor: {
+      method: "DELETE",
+      path: "authors/:id",
+      responses: {
+        200: c.type<any>(),
+      },
+    },
+  },
+
+  {
+    pathPrefix: "/api/",
+  }
+);

@@ -8,21 +8,6 @@ interface DataItem {
   count: number;
 }
 
-const data: DataItem[] = [
-  {
-    type: "Conference",
-    count: 46,
-  },
-  {
-    type: "Journal",
-    count: 38,
-  },
-  {
-    type: "Book",
-    count: 9,
-  },
-];
-
 // Use shadcn/ui chart colors
 const colors = [
   "red",
@@ -33,37 +18,37 @@ const colors = [
   "hsl(var(--chart-6))",
 ];
 
-interface CustomTooltipProps {
-  active?: boolean;
-  payload?: Array<{
-    payload: DataItem & { fill: string };
-  }>;
-}
+// interface CustomTooltipProps {
+//   active?: boolean;
+//   payload?: Array<{
+//     payload: DataItem & { fill: string };
+//   }>;
+// }
 
-const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
-  if (!active || !payload || !payload.length) return null;
+// const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
+//   if (!active || !payload || !payload.length) return null;
 
-  const data = payload[0].payload;
-  if (!data) return null;
+//   const data = payload[0].payload;
+//   if (!data) return null;
 
-  return (
-    <div className="rounded-lg border bg-background p-4 shadow-sm">
-      <div className="grid gap-2">
-        <div className="flex items-center gap-2">
-          <div
-            className="h-4 w-4 rounded-full"
-            style={{ backgroundColor: data.fill }}
-          />
-          <p className="font-medium">{data.type}</p>
-        </div>
-        <div className="text-sm">
-          <p className="text-muted-foreground">Count</p>
-          <p className="font-medium">{data.count}</p>
-        </div>
-      </div>
-    </div>
-  );
-};
+//   return (
+//     <div className="rounded-lg border bg-background p-4 shadow-sm">
+//       <div className="grid gap-2">
+//         <div className="flex items-center gap-2">
+//           <div
+//             className="h-4 w-4 rounded-full"
+//             style={{ backgroundColor: data.fill }}
+//           />
+//           <p className="font-medium">{data.type}</p>
+//         </div>
+//         <div className="text-sm">
+//           <p className="text-muted-foreground">Count</p>
+//           <p className="font-medium">{data.count}</p>
+//         </div>
+//       </div>
+//     </div>
+//   );
+// };
 
 interface ArticlePieChartProps {
   className?: string;
@@ -74,7 +59,7 @@ export function ArticlePieChart({ className }: ArticlePieChartProps) {
     (DataItem & { fill: string }) | null
   >(null);
 
-  const { data: pieChart, isLoading } = tsr.getPieChartData.useQuery({
+  const { data: pieChart, isLoading } = tsr.chart.getPieChartData.useQuery({
     queryKey: ["/pie-chart"],
   });
 

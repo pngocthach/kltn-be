@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ChevronRight,
   MoreHorizontal,
@@ -19,6 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { tsr } from "@/App";
 
 interface User {
   _id: string;
@@ -96,7 +97,9 @@ function AffiliationItem({
             <span className="font-medium">{affiliation.name}</span>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Users2 className="h-4 w-4" />
-              <span>{affiliation.users.length} administrators</span>
+              <span>
+                {affiliation.users && affiliation.users.length} administrators
+              </span>
               {affiliation.authors && (
                 <>
                   <span>•</span>
@@ -139,7 +142,7 @@ function AffiliationItem({
       <EditAdminDialog
         open={isEditingAdmin}
         onOpenChange={setIsEditingAdmin}
-        currentAdmins={affiliation.users}
+        currentAdmins={affiliation.users || []}
         onSubmit={(values) => {
           // @ts-expect-error idk
           onEditAdmin(affiliation._id, values.users);
@@ -190,135 +193,43 @@ function AffiliationItem({
 }
 
 export function AffiliationTree() {
-  const [affiliations, setAffiliations] = useState<Affiliation[]>(
-    [
-      {
-        _id: "67b1c2ea23349089e13ea132",
-        name: "VNU",
-        users: [
-          {
-            _id: "67b054d57050e48f8b33d3f5",
-            name: "test@email.com",
-            email: "test@email.com",
-            emailVerified: false,
-            createdAt: "2025-02-15T08:48:21.206Z",
-            updatedAt: "2025-02-15T08:48:21.206Z",
-          },
-        ],
-        createdAt: "2025-02-16T10:50:18.100Z",
-        updatedAt: "2025-02-19T13:16:04.591Z",
-        authors: [
-          "67b5d8de56891e068b8447be",
-          "67b5d68f56891e068b8447bc",
-          "67b5d6ab56891e068b8447bd",
-          "67b5d992be5db7e46c80c9fe",
-        ],
-      },
-      {
-        _id: "67b1c35dbf0dc8d3fc93b908",
-        name: "UET",
-        parent: "67b1c2ea23349089e13ea132",
-        users: [
-          {
-            _id: "67b054d57050e48f8b33d3f5",
-            name: "test@email.com",
-            email: "test@email.com",
-            emailVerified: false,
-            createdAt: "2025-02-15T08:48:21.206Z",
-            updatedAt: "2025-02-15T08:48:21.206Z",
-          },
-        ],
-        createdAt: "2025-02-16T10:52:13.448Z",
-        updatedAt: "2025-02-16T10:52:13.448Z",
-      },
-      {
-        _id: "67b1d32c89529bb94ddf608f",
-        name: "Khoa Công nghệ thông tin",
-        parent: "67b1c35dbf0dc8d3fc93b908",
-        users: [
-          {
-            _id: "67af8828aea1b1f73ed5139d",
-            name: "a@mail.com",
-            email: "a@mail.com",
-            emailVerified: false,
-            createdAt: "2025-02-14T18:15:04.937Z",
-            updatedAt: "2025-02-14T18:15:04.937Z",
-          },
-          {
-            _id: "67b054d57050e48f8b33d3f5",
-            name: "test@email.com",
-            email: "test@email.com",
-            emailVerified: false,
-            createdAt: "2025-02-15T08:48:21.206Z",
-            updatedAt: "2025-02-15T08:48:21.206Z",
-          },
-        ],
-        createdAt: "2025-02-16T11:59:40.246Z",
-        updatedAt: "2025-02-19T14:51:00.071Z",
-        authors: [
-          "67b5d68f56891e068b8447bc",
-          "67b5d6ab56891e068b8447bd",
-          "67b5dac4be5db7e46c80c9ff",
-          "67b5efa807db1134427437fb",
-          "67b5d57056891e068b8447ba",
-        ],
-      },
-      {
-        _id: "67b1d33489529bb94ddf6090",
-        name: "Khoa ĐTVT",
-        parent: "67b1c35dbf0dc8d3fc93b908",
-        users: [],
-        createdAt: "2025-02-16T11:59:48.649Z",
-        updatedAt: "2025-02-19T12:13:31.135Z",
-      },
-      {
-        _id: "67b1d3b289529bb94ddf6091",
-        name: "Bộ môn CNPM",
-        parent: "67b1d32c89529bb94ddf608f",
-        createdAt: "2025-02-16T12:01:54.433Z",
-        updatedAt: "2025-02-19T12:53:06.228Z",
-        users: [],
-      },
-      {
-        _id: "67b1d3b689529bb94ddf6092",
-        name: "Bộ môn KHMT",
-        parent: "67b1d32c89529bb94ddf608f",
-        createdAt: "2025-02-16T12:01:58.674Z",
-        updatedAt: "2025-02-19T13:21:10.928Z",
-        authors: ["67b5dac4be5db7e46c80c9ff"],
-        users: [],
-      },
-      {
-        _id: "67b5ca18110cbe0bc6b3be17",
-        name: "Bộ môn MMT",
-        parent: "67b1d32c89529bb94ddf608f",
-        createdAt: "2025-02-19T12:10:00.351Z",
-        updatedAt: "2025-02-19T12:10:00.351Z",
-        users: [],
-      },
-      {
-        _id: "67b5cad5110cbe0bc6b3be19",
-        name: "Khoa gì đấy",
-        parent: "67b5cabf110cbe0bc6b3be18",
-        createdAt: "2025-02-19T12:13:09.388Z",
-        updatedAt: "2025-02-19T12:13:09.388Z",
-        users: [],
-      },
-      {
-        _id: "67bb57930cbdcad33652e22c",
-        name: "Tét",
-        parent: "67b1d32c89529bb94ddf608f",
-        createdAt: "2025-02-23T17:14:59.186Z",
-        updatedAt: "2025-02-23T17:14:59.186Z",
-        users: [],
-      },
-    ]
-    // Add all other affiliations here
-  );
+  const [affiliations, setAffiliations] = useState<Affiliation[]>([]);
+  const { data, isLoading, error } =
+    tsr.affiliation.getRawAffiliations.useQuery({
+      queryKey: ["/api/raw-affiliations"],
+    });
 
+  useEffect(() => {
+    if (!isLoading && data) {
+      setAffiliations(data.body as Affiliation[]);
+    }
+  }, [data, isLoading]);
+
+  if (isLoading || error || !data || !data.body) {
+    return <div>Unable to render data</div>;
+  }
+
+  // Get root level affiliations
+  const rootAffiliations = affiliations.filter((a) => !a.parent);
+
+  console.log("rootAffiliations:", rootAffiliations);
+  console.log("affiliations:", affiliations);
+
+  if (rootAffiliations.length === 0) {
+    return <div>No affiliations found</div>;
+  }
+
+  // Add all other affiliations here
+
+  // Update the handleAddChild function to include adminPassword
   const handleAddChild = (
     parentId: string,
-    data: { name: string; adminName?: string; adminEmail?: string }
+    data: {
+      name: string;
+      adminName?: string;
+      adminEmail?: string;
+      adminPassword?: string;
+    }
   ) => {
     // In a real app, this would call an API to create a new child affiliation
     console.log("Adding child to:", parentId, data);
@@ -344,7 +255,7 @@ export function AffiliationTree() {
       updatedAt: new Date().toISOString(),
     };
 
-    setAffiliations([...affiliations, newAffiliation]);
+    // setAffiliations([...affiliations, newAffiliation]);
   };
 
   const handleDelete = (id: string) => {
@@ -365,9 +276,6 @@ export function AffiliationTree() {
     console.log("Edit affiliation:", id, data);
   };
 
-  // Get root level affiliations
-  const rootAffiliations = affiliations.filter((a) => !a.parent);
-
   return (
     <div className="rounded-lg border">
       <div className="p-4">
@@ -375,7 +283,7 @@ export function AffiliationTree() {
           <AffiliationItem
             key={affiliation._id}
             affiliation={affiliation}
-            allAffiliations={affiliations}
+            allAffiliations={data.body as Affiliation[]}
             onAddChild={handleAddChild}
             onDelete={handleDelete}
             onEditAdmin={handleEditAdmin}

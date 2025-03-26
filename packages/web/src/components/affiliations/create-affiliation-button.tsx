@@ -1,3 +1,5 @@
+"use client";
+
 import { useState } from "react";
 import { Plus } from "lucide-react";
 
@@ -31,6 +33,7 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
+import { tsr } from "@/App";
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -43,10 +46,17 @@ const formSchema = z.object({
   adminName: z.string().min(2, {
     message: "Admin name must be at least 2 characters.",
   }),
+  adminPassword: z.string().optional(),
 });
 
 export function CreateAffiliationButton() {
   const [open, setOpen] = useState(false);
+
+  // get affiliations from API using tanstack query
+  const { data: affiliationsResponse, isLoading } =
+    tsr.affiliation.getAffiliations.useQuery({
+      queryKey: ["/api/affiliations"],
+    });
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -72,7 +82,7 @@ export function CreateAffiliationButton() {
           Create Affiliation
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Create Affiliation</DialogTitle>
           <DialogDescription>
@@ -81,72 +91,114 @@ export function CreateAffiliationButton() {
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter affiliation name" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="parentId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Parent Affiliation</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
+            <div className="space-y-4">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
                     <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select parent affiliation" />
-                      </SelectTrigger>
+                      <Input placeholder="Enter affiliation name" {...field} />
                     </FormControl>
-                    <SelectContent>
-                      <SelectItem value="1">Stanford University</SelectItem>
-                      <SelectItem value="2">MIT</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>
-                    Optional. Leave empty to create a top-level affiliation.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="adminName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Administrator Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter administrator name" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="adminEmail"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Administrator Email</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter administrator email" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="parentId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Parent Affiliation</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select parent affiliation" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {isLoading ? (
+                          <SelectItem value="loading">Loading...</SelectItem>
+                        ) : affiliationsResponse?.body ? (
+                          affiliationsResponse.body.map((affiliation) => (
+                            <SelectItem
+                              key={affiliation._id}
+                              value={affiliation._id}
+                            >
+                              {affiliation.name}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="none">
+                            No affiliations found
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Optional. Leave empty to create a top-level affiliation.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="adminName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Administrator Name</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Enter administrator name"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="adminEmail"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Administrator Email</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Enter administrator email"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="adminPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Administrator Password</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="password"
+                        placeholder="Enter administrator password (optional)"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Optional. Leave empty to generate a random password.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
             <DialogFooter>
               <Button type="submit">Create</Button>
             </DialogFooter>

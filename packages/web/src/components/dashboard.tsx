@@ -1,18 +1,5 @@
-"use client";
-
-import type React from "react";
-
 import { useState } from "react";
-import {
-  BookOpen,
-  FileText,
-  GraduationCap,
-  Home,
-  Library,
-  Search,
-  Settings,
-  Users2,
-} from "lucide-react";
+import { BookOpen, GraduationCap, Search, Users2 } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -48,17 +35,17 @@ import { tsr } from "@/App";
 export function Dashboard() {
   const [search, setSearch] = useState("");
   const { data: totalArticles, isLoading: totalArticlesLoading } =
-    tsr.getTotalArticles.useQuery({
+    tsr.chart.getTotalArticles.useQuery({
       queryKey: ["/total-article"],
     });
 
   const { data: totalAuthors, isLoading: totalAuthorsLoading } =
-    tsr.getTotalAuthors.useQuery({
+    tsr.chart.getTotalAuthors.useQuery({
       queryKey: ["/total-authors"],
     });
 
   const { data: totalAffiliations, isLoading: totalAffiliationsLoading } =
-    tsr.getTotalAffiliations.useQuery({
+    tsr.chart.getTotalAffiliations.useQuery({
       queryKey: ["/total-affiliations"],
     });
 

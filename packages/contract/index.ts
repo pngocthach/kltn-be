@@ -1,20 +1,21 @@
 import { initContract } from "@ts-rest/core";
 import { articleContract } from "./api/article";
-import { z } from "zod";
+import { chartContract } from "./api/chart";
+import { authorContract } from "./api/author";
+import { affiliationContract } from "./api/affiliation";
 
 const c = initContract();
-const videoContract = c.router({
-  transcribeVideo: {
-    method: "POST",
-    path: "/transcribe",
-    responses: {
-      200: c.type<{ transcript: string }>(),
-    },
-    body: z.object({
-      videoUrl: z.string(),
-    }),
-    summary: "Transcribe YouTube video by videoUrl",
-  },
+const contract = c.router({
+  chart: chartContract,
+  article: articleContract,
+  author: authorContract,
+  affiliation: affiliationContract,
 });
 
-export { videoContract, articleContract, c };
+export {
+  contract,
+  articleContract,
+  chartContract,
+  authorContract,
+  affiliationContract,
+};

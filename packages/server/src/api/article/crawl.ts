@@ -1,10 +1,11 @@
 import puppeteer, { Page } from "puppeteer";
 import { connectDB } from "@/configs/mongodb";
-import { Router } from "express";
-// Or import puppeteer from 'puppeteer-core';
-import { ObjectId } from "mongodb";
+import { ObjectId, WithId } from "mongodb";
 import { parseToMongoDate } from "@/helper";
-import { sendToQueue } from "@/configs/rabbitmq";
+import { rabbitMQ, QUEUES } from "@/configs/rabbitmq";
+import { jobModel } from "../jobs/jobs.model";
+import { Job } from "@kltn/contract/api/article";
+import { Router } from "express";
 
 const db = await connectDB();
 const articleModel = db.collection("article");
@@ -144,8 +145,65 @@ router.post("/crawl", async (req, res) => {
     return res.status(500).json({ error: "RabbitMQ not initialized" });
   }
 
-  await sendToQueue(channelInstance, { url, authorId });
-  res.json({ message: "Crawl request queued" });
+  const job = await jobModel.insertOne({
+    type: "crawl_scholar",
+    url,
+    authorId: new ObjectId(authorId),
+    status: "pending",
+    createdAt: new Date(),
+  });
+
+  await rabbitMQ.sendToQueue(channelInstance, {
+    jobId: job.insertedId.toString(),
+  });
+  res.json({
+    _id: job.insertedId,
+    type: "crawl_scholar",
+    url,
+    authorId: new ObjectId(authorId),
+    status: "pending",
+    createdAt: new Date(),
+  });
 });
+
+export async function createCrawlJob(
+  url: string,
+  authorId: string
+): Promise<WithId<Job>> {
+  if (!url || !authorId) {
+    throw new Error("Missing required fields");
+  }
+
+  const job = await jobModel.insertOne({
+    type: "crawl_scholar",
+    url,
+    authorId: new ObjectId(authorId),
+    status: "pending",
+    createdAt: new Date(),
+  });
+
+  try {
+    await rabbitMQ.sendToQueue(QUEUES.CRAWL_SCHOLAR, {
+      jobId: job.insertedId.toString(),
+    });
+
+    return {
+      _id: job.insertedId,
+      type: "crawl_scholar",
+      url,
+      authorId: new ObjectId(authorId),
+      status: "pending",
+      createdAt: new Date(),
+    };
+  } catch (error) {
+    // If queue fails, update job status to failed
+    await jobModel.updateOne(
+      { _id: job.insertedId },
+      { $set: { status: "failed", error: "Failed to queue job" } }
+    );
+
+    throw new Error("Failed to queue job");
+  }
+}
 
 export default router;

@@ -1,5 +1,3 @@
-"use client";
-
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -12,6 +10,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -38,6 +37,7 @@ interface Affiliation {
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
   parent: z.string().transform((val) => (val === "none" ? undefined : val)),
+  adminPassword: z.string().optional(),
 });
 
 interface EditAffiliationDialogProps {
@@ -60,6 +60,7 @@ export function EditAffiliationDialog({
     defaultValues: {
       name: currentAffiliation.name,
       parent: currentAffiliation.parent || "none",
+      adminPassword: "",
     },
   });
 
@@ -70,57 +71,80 @@ export function EditAffiliationDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Edit Affiliation</DialogTitle>
           <DialogDescription>Update the affiliation details.</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter affiliation name" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="parent"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Parent Affiliation</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
+            <div className="space-y-4">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
                     <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select parent affiliation" />
-                      </SelectTrigger>
+                      <Input placeholder="Enter affiliation name" {...field} />
                     </FormControl>
-                    <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      {availableParents.map((affiliation) => (
-                        <SelectItem
-                          key={affiliation._id}
-                          value={affiliation._id}
-                        >
-                          {affiliation.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="parent"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Parent Affiliation</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select parent affiliation" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        {availableParents.map((affiliation) => (
+                          <SelectItem
+                            key={affiliation._id}
+                            value={affiliation._id}
+                          >
+                            {affiliation.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="adminPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Administrator Password</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="password"
+                        placeholder="Enter new admin password (optional)"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Leave empty to keep current password. This will update the
+                      password for all administrators.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
             <DialogFooter>
               <Button type="submit">Save changes</Button>
             </DialogFooter>

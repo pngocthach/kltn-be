@@ -1,3 +1,4 @@
+"use client";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -41,6 +42,7 @@ const formSchema = z.object({
       message: "Admin name must be at least 2 characters.",
     })
     .optional(),
+  adminPassword: z.string().optional(),
 });
 
 interface CreateChildAffiliationDialogProps {
@@ -62,6 +64,7 @@ export function CreateChildAffiliationDialog({
       name: "",
       adminEmail: "",
       adminName: "",
+      adminPassword: "",
     },
   });
 
@@ -75,7 +78,7 @@ export function CreateChildAffiliationDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Create Child Affiliation</DialogTitle>
           <DialogDescription>
@@ -87,45 +90,70 @@ export function CreateChildAffiliationDialog({
             onSubmit={form.handleSubmit(handleSubmit)}
             className="space-y-4"
           >
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter affiliation name" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="adminName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Administrator Name (Optional)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter administrator name" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="adminEmail"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Administrator Email (Optional)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter administrator email" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="space-y-4">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter affiliation name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="adminName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Administrator Name (Optional)</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Enter administrator name"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="adminEmail"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Administrator Email (Optional)</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Enter administrator email"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="adminPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Administrator Password (Optional)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="password"
+                        placeholder="Enter administrator password"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
             <DialogFooter>
               <Button type="submit">Create</Button>
             </DialogFooter>

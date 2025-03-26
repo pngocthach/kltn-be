@@ -52,49 +52,49 @@ const data: DataItem[] = [
   },
 ];
 
-interface CustomTooltipProps {
-  active?: boolean;
-  payload?: Array<{
-    payload: DataItem;
-  }>;
-}
+// interface CustomTooltipProps {
+//   active?: boolean;
+//   payload?: Array<{
+//     payload: DataItem;
+//   }>;
+// }
 
-const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
-  if (!active || !payload || !payload.length) return null;
+// const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
+//   if (!active || !payload || !payload.length) return null;
 
-  const data = payload[0].payload;
-  if (!data) return null;
+//   const data = payload[0].payload;
+//   if (!data) return null;
 
-  return (
-    <div className="rounded-lg border bg-background p-4 shadow-sm">
-      <div className="grid gap-2">
-        <p className="font-medium">{data.name}</p>
-        <div className="grid grid-cols-2 gap-2 text-sm">
-          <div>
-            <p className="text-muted-foreground">Articles</p>
-            <p className="font-medium">{data.articles}</p>
-          </div>
-          <div>
-            <p className="text-muted-foreground">Citations</p>
-            <p className="font-medium">{data.citations}</p>
-          </div>
-          <div>
-            <p className="text-muted-foreground">h-index</p>
-            <p className="font-medium">{data.hIndex}</p>
-          </div>
-          <div>
-            <p className="text-muted-foreground">Top Field</p>
-            <p className="font-medium">{data.topField}</p>
-          </div>
-          <div className="col-span-2">
-            <p className="text-muted-foreground">Affiliation</p>
-            <p className="font-medium">{data.affiliation}</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
+//   return (
+//     <div className="rounded-lg border bg-background p-4 shadow-sm">
+//       <div className="grid gap-2">
+//         <p className="font-medium">{data.name}</p>
+//         <div className="grid grid-cols-2 gap-2 text-sm">
+//           <div>
+//             <p className="text-muted-foreground">Articles</p>
+//             <p className="font-medium">{data.articles}</p>
+//           </div>
+//           <div>
+//             <p className="text-muted-foreground">Citations</p>
+//             <p className="font-medium">{data.citations}</p>
+//           </div>
+//           <div>
+//             <p className="text-muted-foreground">h-index</p>
+//             <p className="font-medium">{data.hIndex}</p>
+//           </div>
+//           <div>
+//             <p className="text-muted-foreground">Top Field</p>
+//             <p className="font-medium">{data.topField}</p>
+//           </div>
+//           <div className="col-span-2">
+//             <p className="text-muted-foreground">Affiliation</p>
+//             <p className="font-medium">{data.affiliation}</p>
+//           </div>
+//         </div>
+//       </div>
+//     </div>
+//   );
+// };
 
 interface AuthorChartProps {
   className?: string;

@@ -1,4 +1,5 @@
-import { articleContract } from "@kltn/contract";
+import { Router } from "express";
+import { chartContract } from "@kltn/contract";
 import { initServer } from "@ts-rest/express";
 import { connectDB } from "@/configs/mongodb";
 
@@ -8,14 +9,23 @@ const authorModel = db.collection("authors");
 const affiliationModel = db.collection("affiliations");
 
 const s = initServer();
-const router = s.router(articleContract, {
-  getTotalArticles: async () => {
-    return {
-      status: 200,
-      body: {
-        total: await articleModel.countDocuments(),
+const router = s.router(chartContract, {
+  getTotalArticles: {
+    middleware: [
+      (req, res, next) => {
+        console.log("Middleware 1");
+        next();
       },
-    };
+    ],
+    handler: async (req) => {
+      console.log(req.headers.cookie);
+      return {
+        status: 200,
+        body: {
+          total: await articleModel.countDocuments(),
+        },
+      };
+    },
   },
 
   getLineChartData: async () => {
@@ -239,4 +249,5 @@ const router = s.router(articleContract, {
     };
   },
 });
+
 export default router;

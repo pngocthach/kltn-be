@@ -2,6 +2,7 @@ import createHttpError from "http-errors";
 import { AuthorDocument, Author, authorModel } from "../author.model";
 import { AuthorRepo } from "./author.repo";
 import { Types } from "mongoose";
+import { CreateAuthorDto } from "@kltn/contract/api/author";
 
 class AuthorMongoDbRepo implements AuthorRepo {
   async update(
@@ -29,17 +30,19 @@ class AuthorMongoDbRepo implements AuthorRepo {
   }
 
   delete(id: string): Promise<AuthorDocument | undefined> {
-    throw new Error("Method not implemented.");
+    return authorModel.findOneAndDelete({ _id: new Types.ObjectId(id) });
   }
 
   async getAll(): Promise<AuthorDocument[]> {
     return authorModel.find().toArray();
   }
 
-  async create(author: Author): Promise<AuthorDocument> {
-    author.createdAt = new Date();
-    author.updatedAt = new Date();
-    const result = await authorModel.insertOne(author);
+  async create(author: CreateAuthorDto): Promise<AuthorDocument> {
+    const result = await authorModel.insertOne({
+      ...author,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
     return { ...author, _id: result.insertedId };
   }
 }

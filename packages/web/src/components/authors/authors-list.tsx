@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Calendar,
   ExternalLink,
@@ -10,7 +10,6 @@ import {
 import { format } from "date-fns";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,69 +20,50 @@ import {
 import { Input } from "@/components/ui/input";
 import { EditAuthorDialog } from "@/components/authors/edit-author-dialog";
 import { CrawlOptionsDialog } from "@/components/authors/crawl-options-dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { tsr } from "@/App";
+import { AuthorResponse as Author } from "@kltn/contract/api/author";
 
-interface Author {
-  _id: string;
-  name: string;
-  url: string;
-  createdAt: string;
-  updatedAt: string;
-  articles: string[];
-  affiliation: string[];
-}
+// interface Author {
+//   _id: string;
+//   name: string;
+//   url: string;
+//   createdAt: string;
+//   updatedAt: string;
+//   articles: string[];
+//   affiliation: string[];
+// }
 
 export function AuthorsList() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [authors, setAuthors] = useState<Author[]>([
-    {
-      _id: "67b5d57056891e068b8447ba",
-      name: "Lê Khánh Trình",
-      url: "https://scholar.google.com/citations?user=Y1d3evoAAAAJ&hl=en",
-      createdAt: "2025-02-19T12:58:24.208Z",
-      updatedAt: "2025-02-19T12:58:24.208Z",
-      articles: [
-        "67b89e82c0674fd3ba558004",
-        "67b89e83c0674fd3ba558005",
-        "67b89e84c0674fd3ba558006",
-        "67b89e85c0674fd3ba558007",
-        "67b89e85c0674fd3ba558008",
-        "67b89e86c0674fd3ba558009",
-        "67b89e86c0674fd3ba55800a",
-      ],
-      affiliation: ["VNU", "UET", "Khoa Công nghệ thông tin"],
-    },
-    {
-      _id: "67b5d68f56891e068b8447bc",
-      name: "Nguyễn Thị Minh Huyền",
-      url: "https://scholar.google.com/citations?user=Z8RQtMkAAAAJ&hl=en",
-      createdAt: "2025-02-19T13:03:11.208Z",
-      updatedAt: "2025-02-19T13:03:11.208Z",
-      articles: [
-        "67b89e87c0674fd3ba55800b",
-        "67b89e88c0674fd3ba55800c",
-        "67b89e89c0674fd3ba55800d",
-      ],
-      affiliation: ["VNU", "UET", "Khoa Công nghệ thông tin"],
-    },
-    {
-      _id: "67b5d6ab56891e068b8447bd",
-      name: "Nguyễn Hà Thanh",
-      url: "https://scholar.google.com/citations?user=J3YCR4QAAAAJ&hl=en",
-      createdAt: "2025-02-19T13:03:39.208Z",
-      updatedAt: "2025-02-19T13:03:39.208Z",
-      articles: ["67b89e8ac0674fd3ba55800e", "67b89e8bc0674fd3ba55800f"],
-      affiliation: ["VNU", "UET", "Khoa Công nghệ thông tin"],
-    },
-  ]);
-
+  const [authors, setAuthors] = useState<Author[]>([]);
   const [editingAuthor, setEditingAuthor] = useState<Author | null>(null);
   const [crawlingAuthor, setCrawlingAuthor] = useState<Author | null>(null);
 
+  const { data, isLoading } = tsr.author.getAuthors.useQuery({
+    queryKey: ["/api/authors"],
+  });
+
+  useEffect(() => {
+    if (!isLoading && data) {
+      setAuthors(data.body as Author[]);
+    }
+  }, [isLoading, data]);
+
+  // Filter authors based on search query
   const filteredAuthors = authors.filter((author) =>
     author.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleDeleteAuthor = (id: string) => {
+    tsr.author.deleteAuthor.mutate({ params: { id } });
     // In a real app, this would call an API to delete the author
     setAuthors(authors.filter((author) => author._id !== id));
   };
@@ -95,17 +75,32 @@ export function AuthorsList() {
         author._id === updatedAuthor._id ? updatedAuthor : author
       )
     );
+
+    tsr.author.editAuthor.mutate({
+      params: { id: updatedAuthor._id },
+      body: updatedAuthor,
+    });
     setEditingAuthor(null);
   };
 
-  const handleCrawlNow = (authorId: string) => {
+  const handleCrawlNow = (author: Author) => {
     // In a real app, this would trigger an immediate crawl
-    console.log("Crawling now for author:", authorId);
+    console.log("Crawling now for author:", author);
     setCrawlingAuthor(null);
+    tsr.article.crawl.mutate({
+      body: {
+        url: author.url,
+        authorId: author._id,
+      },
+    });
   };
 
-  const handleScheduleCrawl = (authorId: string, schedule: string) => {
+  const handleScheduleCrawl = (authorId: string, schedule: number) => {
     // In a real app, this would set up a scheduled crawl
+    tsr.author.editAuthor.mutate({
+      params: { id: authorId },
+      body: { schedule },
+    });
     console.log(
       "Scheduling crawl for author:",
       authorId,
@@ -117,7 +112,7 @@ export function AuthorsList() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
+      <div className="flex items-center justify-between">
         <Input
           placeholder="Search authors..."
           value={searchQuery}
@@ -126,81 +121,88 @@ export function AuthorsList() {
         />
       </div>
 
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {filteredAuthors.map((author) => (
-          <Card key={author._id} className="overflow-hidden">
-            <CardContent className="p-6">
-              <div className="space-y-4">
-                <div className="flex items-start justify-between">
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Affiliation</TableHead>
+              <TableHead className="text-center">Articles</TableHead>
+              <TableHead>Last Updated</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredAuthors.map((author) => (
+              <TableRow key={author._id}>
+                <TableCell>
                   <div>
-                    <h3 className="font-semibold">{author.name}</h3>
+                    <div className="font-medium">{author.name}</div>
                     <a
                       href={author.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary"
+                      className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary"
                     >
                       Google Scholar <ExternalLink className="h-3 w-3" />
                     </a>
                   </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        onClick={() => setEditingAuthor(author)}
-                      >
-                        <Pencil className="mr-2 h-4 w-4" />
-                        Edit Author
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => setCrawlingAuthor(author)}
-                      >
-                        <RefreshCw className="mr-2 h-4 w-4" />
-                        Crawl Options
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        className="text-destructive"
-                        onClick={() => handleDeleteAuthor(author._id)}
-                      >
-                        <Trash className="mr-2 h-4 w-4" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="text-sm">
-                    <span className="font-medium">Affiliation:</span>{" "}
-                    <span className="text-muted-foreground">
-                      {author.affiliation.join(" > ")}
+                </TableCell>
+                <TableCell>
+                  <span className="text-sm">
+                    {author.affiliation.join(" > ")}
+                  </span>
+                </TableCell>
+                <TableCell className="text-center">
+                  <span className="font-medium">{author.articles.length}</span>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Calendar className="h-3 w-3" />
+                    <span>
+                      {format(new Date(author.updatedAt), "MMM d, yyyy")}
                     </span>
                   </div>
-                  <div className="text-sm">
-                    <span className="font-medium">Articles:</span>{" "}
-                    <span className="text-muted-foreground">
-                      {author.articles.length}
-                    </span>
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setCrawlingAuthor(author)}
+                      title="Crawl Options"
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() => setEditingAuthor(author)}
+                        >
+                          <Pencil className="mr-2 h-4 w-4" />
+                          Edit Author
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          onClick={() => handleDeleteAuthor(author._id)}
+                        >
+                          <Trash className="mr-2 h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter className="border-t bg-muted/50 px-6 py-3">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Calendar className="h-3 w-3" />
-                <span>
-                  Last updated:{" "}
-                  {format(new Date(author.updatedAt), "MMM d, yyyy")}
-                </span>
-              </div>
-            </CardFooter>
-          </Card>
-        ))}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </div>
 
       {editingAuthor && (
@@ -217,7 +219,7 @@ export function AuthorsList() {
           open={!!crawlingAuthor}
           onOpenChange={(open) => !open && setCrawlingAuthor(null)}
           author={crawlingAuthor}
-          onCrawlNow={() => handleCrawlNow(crawlingAuthor._id)}
+          onCrawlNow={() => handleCrawlNow(crawlingAuthor)}
           onScheduleCrawl={(schedule) =>
             handleScheduleCrawl(crawlingAuthor._id, schedule)
           }

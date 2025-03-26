@@ -3,11 +3,13 @@ import { connectDB } from "@/configs/mongodb";
 import { WithId } from "mongodb";
 
 export const authorSchema = z.object({
-  name: z.string().min(1).max(255),
-  email: z.string().email().optional(),
-  url: z.string().url(),
-  createdAt: z.date().default(() => new Date()),
-  updatedAt: z.date().default(() => new Date()),
+  name: z.string(),
+  url: z.string().url(), // Ensures it's a valid URL
+  createdAt: z.date(), // Ensures proper datetime format
+  updatedAt: z.date(),
+  articles: z.array(z.string()), // Array of article IDs (strings)
+  affiliation: z.any(), // Array of affiliations (strings)
+  schedule: z.number().optional(),
 });
 
 // export type AuthorDocument = z.infer<typeof zAuthor>;

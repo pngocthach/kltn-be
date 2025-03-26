@@ -1,3 +1,5 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,6 +12,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -33,6 +36,7 @@ interface User {
 const userSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
   email: z.string().email("Please enter a valid email address."),
+  password: z.string().optional(),
 });
 
 const formSchema = z.object({
@@ -58,6 +62,7 @@ export function EditAdminDialog({
       users: currentAdmins.map((admin) => ({
         name: admin.name,
         email: admin.email,
+        password: "",
       })),
     },
   });
@@ -69,7 +74,7 @@ export function EditAdminDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Edit Administrators</DialogTitle>
           <DialogDescription>
@@ -78,53 +83,76 @@ export function EditAdminDialog({
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            {fields.map((field, index) => (
-              <div key={field.id} className="flex items-end gap-2">
-                <div className="flex-1 space-y-4">
-                  <FormField
-                    control={form.control}
-                    name={`users.${index}.name`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Administrator Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Enter name" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name={`users.${index}.email`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Administrator Email</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Enter email" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+            <div className="max-h-[50vh] space-y-4 overflow-y-auto pr-2">
+              {fields.map((field, index) => (
+                <div key={field.id} className="flex items-end gap-2">
+                  <div className="flex-1 space-y-4">
+                    <FormField
+                      control={form.control}
+                      name={`users.${index}.name`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Administrator Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter name" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={`users.${index}.email`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Administrator Email</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter email" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={`users.${index}.password`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Administrator Password</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="password"
+                              placeholder="Enter password (optional)"
+                              {...field}
+                              value={field.value || ""}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Leave empty to keep current password
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="mb-6"
+                    onClick={() => remove(index)}
+                    disabled={fields.length === 1}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="mb-6"
-                  onClick={() => remove(index)}
-                  disabled={fields.length === 1}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
+              ))}
+            </div>
             <Button
               type="button"
               variant="outline"
               className="w-full"
-              onClick={() => append({ name: "", email: "" })}
+              onClick={() => append({ name: "", email: "", password: "" })}
             >
               Add Administrator
             </Button>

@@ -5,8 +5,10 @@ import { AffiliationRepo } from "./repository/affiliation.repo";
 import { AddUsersToAffiliationDto } from "./dto/add-users-to-aff.dto";
 import createHttpError from "http-errors";
 import { ObjectId } from "mongodb";
+import { auth } from "@/utils/auth";
+import { CreateAffiliationDto } from "@kltn/contract/api/affiliation";
 
-class AuthorService {
+class AffiliationService {
   private affiliationRepo: AffiliationRepo;
 
   constructor() {
@@ -25,9 +27,39 @@ class AuthorService {
     return affiliationData;
   }
 
-  async create(affiliation: Affiliation): Promise<AffiliationDocument> {
-    return this.affiliationRepo.create(affiliation);
-  }
+  // async create(dto: CreateAffiliationDto): Promise<AffiliationDocument> {
+  //   const affiliation: Affiliation = {
+  //     name: dto.name,
+  //     parent: dto.parent ? new ObjectId(dto.parent) : undefined,
+  //     users: [],
+  //     createdAt: new Date(),
+  //     updatedAt: new Date(),
+  //   };
+
+  //   // If admin details are provided, create a new user
+  //   if (dto.admin?.email) {
+  //     let user;
+
+  //     if (dto.admin.password) {
+  //       // Create user with password
+  //       user = await auth.createUser({
+  //         email: dto.admin.email,
+  //         password: dto.admin.password,
+  //         name: dto.admin.name || dto.admin.email,
+  //       });
+  //     } else {
+  //       // Create user without password (will trigger email invitation)
+  //       user = await auth.inviteUser({
+  //         email: dto.admin.email,
+  //         name: dto.admin.name || dto.admin.email,
+  //       });
+  //     }
+
+  //     affiliation.users = [new ObjectId(user.id)];
+  //   }
+
+  //   return this.affiliationRepo.create(affiliation);
+  // }
 
   async addUserToAffiliation(
     affiliationId: string,
@@ -86,4 +118,4 @@ class AuthorService {
   }
 }
 
-export default new AuthorService();
+export default new AffiliationService();

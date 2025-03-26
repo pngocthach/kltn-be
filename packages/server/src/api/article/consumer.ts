@@ -1,13 +1,36 @@
-import { connectRabbitMQ, QUEUE_NAME } from "@/configs/rabbitmq";
-import { crawl } from "./crawl"; // Your crawl function
+import { QUEUES, rabbitMQ } from "@/configs/rabbitmq";
+import { crawl } from "./crawl";
 import { authorModel } from "@/api/author/author.model";
 import { ObjectId } from "mongodb";
+import { jobModel } from "../jobs/jobs.model";
 
-async function startConsumer(channel) {
-  channel.consume(QUEUE_NAME, async (msg) => {
-    if (!msg) return;
+export async function startConsumer() {
+  await rabbitMQ.consumeQueue(QUEUES.CRAWL_SCHOLAR, async (message) => {
+    const { jobId } = message;
+    if (!jobId) {
+      throw new Error("Invalid message format: missing jobId");
+    }
 
-    const { url, authorId } = JSON.parse(msg.content.toString());
+    const job = await jobModel.findOneAndUpdate(
+      { _id: new ObjectId(jobId) },
+      { $set: { status: "processing" } },
+      { returnDocument: "after" }
+    );
+
+    if (!job) {
+      throw new Error("Job not found");
+    }
+
+    if (job.type === "crawl_scopus") {
+      console.log("Crawling Scopus...");
+      await jobModel.updateOne(
+        { _id: new ObjectId(jobId) },
+        { $set: { status: "completed", completedAt: new Date() } }
+      );
+      return;
+    }
+
+    const { url, authorId } = job;
     console.log(`Processing crawl for: ${url}`);
 
     try {
@@ -20,14 +43,19 @@ async function startConsumer(channel) {
       );
 
       console.log(`Crawling done for ${url}`);
-      channel.ack(msg);
+      await jobModel.updateOne(
+        { _id: new ObjectId(jobId) },
+        { $set: { status: "completed", completedAt: new Date() } }
+      );
     } catch (error) {
       console.error(`Error processing ${url}:`, error);
-      channel.nack(msg, false, true); // Requeue message on failure
+      await jobModel.updateOne(
+        { _id: new ObjectId(jobId) },
+        { $set: { status: "failed", error: error.message } }
+      );
+      throw error; // This will trigger the nack
     }
   });
 
-  console.log("RabbitMQ consumer started...");
+  console.log("RabbitMQ consumers started...");
 }
-
-export { startConsumer };

@@ -2,9 +2,9 @@ import { RouterProvider } from "react-router-dom";
 import { router } from "./Router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { initTsrReactQuery } from "@ts-rest/react-query/v5";
-import { articleContract } from "@kltn/contract";
+import { contract } from "@kltn/contract";
 
-export const tsr = initTsrReactQuery(articleContract, {
+export const tsr = initTsrReactQuery(contract, {
   baseUrl: "http://localhost:5000",
   baseHeaders: {
     "x-app-source": "ts-rest",

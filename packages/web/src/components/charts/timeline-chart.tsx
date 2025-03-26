@@ -6,59 +6,8 @@ import {
 } from "@/components/ui/chart";
 import { tsr } from "@/App";
 
-const data = [
-  {
-    month: "Jan",
-    articles: 12,
-  },
-  {
-    month: "Feb",
-    articles: 18,
-  },
-  {
-    month: "Mar",
-    articles: 15,
-  },
-  {
-    month: "Apr",
-    articles: 25,
-  },
-  {
-    month: "May",
-    articles: 30,
-  },
-  {
-    month: "Jun",
-    articles: 22,
-  },
-  {
-    month: "Jul",
-    articles: 28,
-  },
-  {
-    month: "Aug",
-    articles: 35,
-  },
-  {
-    month: "Sep",
-    articles: 29,
-  },
-  {
-    month: "Oct",
-    articles: 33,
-  },
-  {
-    month: "Nov",
-    articles: 40,
-  },
-  {
-    month: "Dec",
-    articles: 45,
-  },
-];
-
 export function TimelineChart({ className }: { className?: string }) {
-  const { data: lineChartData, isLoading } = tsr.getLineChartData.useQuery({
+  const { data: lineChartData } = tsr.chart.getLineChartData.useQuery({
     queryKey: ["/api/article-line-chart"],
   });
 

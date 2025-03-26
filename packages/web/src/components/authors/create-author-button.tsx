@@ -31,6 +31,7 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
+import { tsr } from "@/App";
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -44,7 +45,7 @@ const formSchema = z.object({
   }),
 });
 
-export function CreateAuthorButton() {
+export function CreateAuthorButton({ onCreate }) {
   const [open, setOpen] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -59,20 +60,19 @@ export function CreateAuthorButton() {
   function onSubmit(values: z.infer<typeof formSchema>) {
     // In a real app, this would create the author
     console.log(values);
+    // tsr.author.createAuthor.mutate({ body: values });
+    onCreate({ body: values });
     setOpen(false);
     form.reset();
   }
 
   // Mock affiliations - in a real app, these would come from an API
-  const affiliations = [
-    { id: "67b1c2ea23349089e13ea132", name: "VNU" },
-    { id: "67b1c35dbf0dc8d3fc93b908", name: "UET" },
-    { id: "67b1d32c89529bb94ddf608f", name: "Khoa Công nghệ thông tin" },
-    { id: "67b1d33489529bb94ddf6090", name: "Khoa ĐTVT" },
-    { id: "67b1d3b289529bb94ddf6091", name: "Bộ môn CNPM" },
-    { id: "67b1d3b689529bb94ddf6092", name: "Bộ môn KHMT" },
-    { id: "67b5ca18110cbe0bc6b3be17", name: "Bộ môn MMT" },
-  ];
+
+  const { data } = tsr.affiliation.getRawAffiliations.useQuery({
+    queryKey: ["/api/raw-affiliations"],
+  });
+
+  const affiliations = data?.body || [];
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -140,7 +140,10 @@ export function CreateAuthorButton() {
                     </FormControl>
                     <SelectContent>
                       {affiliations.map((affiliation) => (
-                        <SelectItem key={affiliation.id} value={affiliation.id}>
+                        <SelectItem
+                          key={affiliation._id}
+                          value={affiliation._id}
+                        >
                           {affiliation.name}
                         </SelectItem>
                       ))}
