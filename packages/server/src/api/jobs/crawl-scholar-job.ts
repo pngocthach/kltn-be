@@ -3,9 +3,9 @@ import { connectDB } from "@/configs/mongodb";
 import { ObjectId } from "mongodb";
 import { differenceInDays } from "date-fns";
 import { QUEUES, rabbitMQ } from "@/configs/rabbitmq";
+import { authorModel } from "@/api/author/author.model";
 
 const db = await connectDB();
-const authorModel = db.collection("authors");
 const jobModel = db.collection("jobs");
 
 export const scheduledCrawlJob = new CronJob(
@@ -31,7 +31,7 @@ export const scheduledCrawlJob = new CronJob(
 
           const job = await jobModel.insertOne({
             type: "crawl_scholar",
-            url: author.scholarUrl,
+            url: author.url,
             authorId: new ObjectId(author._id),
             status: "pending",
             createdAt: new Date(),

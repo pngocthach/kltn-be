@@ -24,6 +24,8 @@ import { writeFileSync } from "fs";
 import chartRoute from "./api/chart/chart.route";
 import affiliationContractRoute from "./api/affiliation/affiliation.route";
 import "./api/jobs/jobs.index";
+import "./api/remote-config/config.model";
+import jobsRoute from "./api/jobs/jobs.route";
 
 const app = express();
 const port = env.PORT;
@@ -132,10 +134,13 @@ createExpressEndpoints(contract.author, authorRoute, app, {
   globalMiddleware: [authMiddleware],
 });
 createExpressEndpoints(contract.affiliation, affiliationContractRoute, app);
+createExpressEndpoints(contract.jobs, jobsRoute, app);
 
 app.get("/", (req, res) => {
   res.send("Hello World!");
 });
+import scopusCheckRouter from "./api/jobs/scopus-check";
+app.use("/api", scopusCheckRouter);
 
 app.all(/(.*)/, routeNotFoundMiddleware);
 

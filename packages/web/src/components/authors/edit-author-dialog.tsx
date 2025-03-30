@@ -48,7 +48,8 @@ interface EditAuthorDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   author: Author;
-  onSubmit: (author: Author) => void;
+  onSubmit: (author: any) => void;
+  isLoading: boolean;
 }
 
 export function EditAuthorDialog({
@@ -56,29 +57,48 @@ export function EditAuthorDialog({
   onOpenChange,
   author,
   onSubmit,
+  isLoading,
 }: EditAuthorDialogProps) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: author.name,
       url: author.url,
-      affiliation: author.affiliation[author.affiliation.length - 1], // Most specific affiliation
+      // If author.affiliation is an array, take the last (most specific) one
+      // If it's a string (ID), use it directly
+      affiliation: Array.isArray(author.affiliation)
+        ? author.affiliation[author.affiliation.length - 1]
+        : author.affiliation,
     },
   });
 
-  const { data } = tsr.affiliation.getAffiliations.useQuery({
-    queryKey: ["/api/affiliations"],
-  });
+  const { data: affiliationsData } =
+    tsr.affiliation.getRawAffiliations.useQuery({
+      queryKey: ["/api/raw-affiliations"],
+    });
+
+  // Get the current affiliation path as a string
+  const getCurrentAffiliationPath = () => {
+    if (!author.affiliation) return "";
+    if (Array.isArray(author.affiliation)) {
+      return author.affiliation.join(" > ");
+    }
+    // If we have the ID, try to find the name from affiliations data
+    if (affiliationsData?.body) {
+      const aff = affiliationsData.body.find(
+        (a) => a._id === author.affiliation
+      );
+      return aff ? aff.name : author.affiliation;
+    }
+    return author.affiliation;
+  };
 
   function handleSubmit(values: z.infer<typeof formSchema>) {
-    // In a real app, this would update the author via API
-    const updatedAuthor: Author = {
-      ...author,
+    const updatedAuthor = {
       name: values.name,
       url: values.url,
-      // In a real app, you would need to handle the full affiliation path
-      affiliation: author.affiliation, // This is simplified
-      updatedAt: new Date().toISOString(),
+      affiliation: values.affiliation, // This will be the affiliation ID
+      _id: author._id,
     };
     onSubmit(updatedAuthor);
   }
@@ -135,7 +155,12 @@ export function EditAuthorDialog({
                   <FormLabel>Affiliation</FormLabel>
                   <Select
                     onValueChange={field.onChange}
-                    defaultValue={field.value}
+                    // TODO: change API to return ID and name
+                    defaultValue={
+                      affiliationsData?.body.find(
+                        (aff) => aff.name === author.affiliation[0]
+                      )?._id
+                    }
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -143,26 +168,34 @@ export function EditAuthorDialog({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {data &&
-                        data.body.map((affiliation) => (
-                          <SelectItem
-                            key={affiliation._id}
-                            value={affiliation.name}
-                          >
-                            {affiliation.name}
-                          </SelectItem>
-                        ))}
+                      {affiliationsData?.body?.map((affiliation) => (
+                        <SelectItem
+                          key={affiliation._id}
+                          value={affiliation._id}
+                        >
+                          {affiliation.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormDescription>
-                    Current affiliation path: {author.affiliation.join(" > ")}
+                    Current affiliation: {getCurrentAffiliationPath()}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
             <DialogFooter>
-              <Button type="submit">Save Changes</Button>
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <span className="mr-2">Saving...</span>
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                  </>
+                ) : (
+                  "Save Changes"
+                )}
+              </Button>
             </DialogFooter>
           </form>
         </Form>

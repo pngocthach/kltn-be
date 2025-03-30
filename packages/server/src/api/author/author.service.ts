@@ -1,4 +1,4 @@
-import { CreateAuthorDto } from "@kltn/contract/api/author";
+import { CreateAuthorDto, UpdateAuthorDto } from "@kltn/contract/api/author";
 import { Author, AuthorDocument } from "./author.model";
 import authorMongodb from "./repository/author.mongodb";
 import { AuthorRepo } from "./repository/author.repo";
@@ -42,9 +42,36 @@ class AuthorService {
 
   async updateAuthor(
     id: string,
-    author: Partial<Author>
+    dto: UpdateAuthorDto
   ): Promise<AuthorDocument | undefined> {
-    return this.authorRepo.update(id, author);
+    const author = await this.authorRepo.getById(id);
+    if (!author) {
+      throw createHttpError.NotFound("Author not found");
+    }
+
+    // If affiliation is being updated
+    if (dto.affiliation) {
+      // Get current affiliations that have this author
+      const currentAffiliations = await affiliationModel
+        .find({
+          authors: new ObjectId(id),
+        })
+        .toArray();
+
+      // Remove author from all current affiliations
+      await affiliationModel.updateMany(
+        { authors: new ObjectId(id) },
+        { $pull: { authors: new ObjectId(id) } }
+      );
+
+      // Add author to new affiliation
+      await affiliationModel.updateOne(
+        { _id: new ObjectId(dto.affiliation) },
+        { $addToSet: { authors: new ObjectId(id) } }
+      );
+    }
+
+    return this.authorRepo.update(id, dto);
   }
 
   async deleteAuthor(

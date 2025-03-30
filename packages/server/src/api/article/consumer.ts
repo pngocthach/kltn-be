@@ -34,7 +34,7 @@ export async function startConsumer() {
     console.log(`Processing crawl for: ${url}`);
 
     try {
-      const articles = await crawl(url);
+      const articles = await crawl(url, authorId);
       const articleIds = articles.map((article) => article["_id"]);
 
       await authorModel.updateOne(

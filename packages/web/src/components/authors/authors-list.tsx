@@ -43,19 +43,27 @@ import { AuthorResponse as Author } from "@kltn/contract/api/author";
 
 export function AuthorsList() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [authors, setAuthors] = useState<Author[]>([]);
+  let [authors, setAuthors] = useState<Author[]>([]);
   const [editingAuthor, setEditingAuthor] = useState<Author | null>(null);
   const [crawlingAuthor, setCrawlingAuthor] = useState<Author | null>(null);
 
-  const { data, isLoading } = tsr.author.getAuthors.useQuery({
+  const { data, isLoading, refetch } = tsr.author.getAuthors.useQuery({
     queryKey: ["/api/authors"],
   });
 
-  useEffect(() => {
-    if (!isLoading && data) {
-      setAuthors(data.body as Author[]);
-    }
-  }, [isLoading, data]);
+  const editMutation = tsr.author.editAuthor.useMutation({
+    onSuccess: () => {
+      refetch();
+    },
+  });
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+
+  if (data) {
+    authors = data.body;
+  }
 
   // Filter authors based on search query
   const filteredAuthors = authors.filter((author) =>
@@ -69,15 +77,10 @@ export function AuthorsList() {
   };
 
   const handleEditAuthor = (updatedAuthor: Author) => {
-    // In a real app, this would call an API to update the author
-    setAuthors(
-      authors.map((author) =>
-        author._id === updatedAuthor._id ? updatedAuthor : author
-      )
-    );
-
-    tsr.author.editAuthor.mutate({
+    editMutation.mutate({
       params: { id: updatedAuthor._id },
+      // TODO: fix type
+      // @ts-expect-error idk
       body: updatedAuthor,
     });
     setEditingAuthor(null);
@@ -97,7 +100,7 @@ export function AuthorsList() {
 
   const handleScheduleCrawl = (authorId: string, schedule: number) => {
     // In a real app, this would set up a scheduled crawl
-    tsr.author.editAuthor.mutate({
+    editMutation.mutate({
       params: { id: authorId },
       body: { schedule },
     });
@@ -150,11 +153,17 @@ export function AuthorsList() {
                 </TableCell>
                 <TableCell>
                   <span className="text-sm">
-                    {author.affiliation.join(" > ")}
+                    {author.affiliation &&
+                      Array.isArray(author.affiliation) &&
+                      author.affiliation.join(" > ")}
                   </span>
                 </TableCell>
                 <TableCell className="text-center">
-                  <span className="font-medium">{author.articles.length}</span>
+                  <span className="font-medium">
+                    {author.articles &&
+                      Array.isArray(author.articles) &&
+                      author.articles.length}
+                  </span>
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">

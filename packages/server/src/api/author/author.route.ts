@@ -102,6 +102,8 @@ const router = s.router(authorContract, {
   },
 
   editAuthor: async ({ params, body }) => {
+    console.log(body);
+
     const author = await authorService.updateAuthor(params.id, body);
 
     return {

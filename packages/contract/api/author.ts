@@ -26,6 +26,11 @@ export const authorSchema = z.object({
 });
 export type Author = z.infer<typeof authorSchema>;
 
+export const AuthorResponseDto = authorSchema.extend({
+  affiliation: z.array(z.string()),
+});
+export type AuthorResponseDto = z.infer<typeof AuthorResponseDto>;
+
 const CreateAuthorDto = authorSchema.pick({
   name: true,
   url: true,
@@ -33,13 +38,22 @@ const CreateAuthorDto = authorSchema.pick({
 });
 export type CreateAuthorDto = z.infer<typeof CreateAuthorDto>;
 
+export const UpdateAuthorDto = z.object({
+  name: z.string().optional(),
+  url: z.string().url().optional(),
+  affiliation: z.string().optional(), // This will be the affiliation ID
+  schedule: z.number().optional(),
+});
+
+export type UpdateAuthorDto = z.infer<typeof UpdateAuthorDto>;
+
 export const authorContract = c.router(
   {
     getAuthors: {
       method: "GET",
       path: "authors",
       responses: {
-        200: c.type<AuthorResponse[]>(),
+        200: c.type<AuthorResponseDto[]>(),
       },
     },
 
@@ -56,11 +70,7 @@ export const authorContract = c.router(
     editAuthor: {
       method: "PATCH",
       path: "authors/:id",
-      body: AuthorResponseSchema.omit({
-        createdAt: true,
-        updatedAt: true,
-        _id: true,
-      }).partial(),
+      body: UpdateAuthorDto,
       responses: {
         200: c.type<AuthorResponse>(),
       },
