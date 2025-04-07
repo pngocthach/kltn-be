@@ -1,4 +1,8 @@
-import { CreateAuthorDto, UpdateAuthorDto } from "@kltn/contract/api/author";
+import {
+  authorSchema,
+  CreateAuthorDto,
+  UpdateAuthorDto,
+} from "@kltn/contract/api/author";
 import { Author, AuthorDocument } from "./author.model";
 import authorMongodb from "./repository/author.mongodb";
 import { AuthorRepo } from "./repository/author.repo";
@@ -7,6 +11,7 @@ import { User } from "better-auth/types";
 import { affiliationModel } from "../affiliation/affiliation.model";
 import { ObjectId } from "mongodb";
 import createHttpError from "http-errors";
+import { z } from "zod";
 
 class AuthorService {
   private authorRepo: typeof authorMongodb;
@@ -71,7 +76,8 @@ class AuthorService {
       );
     }
 
-    return this.authorRepo.update(id, dto);
+    const { affiliation, ...updateData } = dto;
+    return this.authorRepo.update(id, updateData);
   }
 
   async deleteAuthor(

@@ -1,6 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
 import { authClient } from "../lib/auth-client";
-import AffiliationComponent from "../components/affiliation";
 
 export const HomePage = () => {
   const {
@@ -40,7 +39,6 @@ function Home() {
   return (
     <div style={{ margin: "20px" }}>
       <NavBar></NavBar>
-      <AffiliationComponent />
     </div>
   );
 }

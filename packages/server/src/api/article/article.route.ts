@@ -2,6 +2,7 @@ import { articleContract } from "@kltn/contract";
 import { initServer } from "@ts-rest/express";
 import { connectDB } from "@/configs/mongodb";
 import { createCrawlJob } from "./crawl";
+import { transformObjectId } from "@/helper/transform-objectId.helper";
 
 const db = await connectDB();
 const articleModel = db.collection("article");
@@ -30,6 +31,24 @@ const router = s.router(articleContract, {
         body: { error: error.message },
       };
     }
+  },
+
+  getArticle: async ({ params }) => {
+    const article = await articleModel.findOne({
+      _id: transformObjectId(params.id),
+    });
+
+    if (!article) {
+      return {
+        status: 404,
+        body: null,
+      };
+    }
+
+    return {
+      status: 200,
+      body: article,
+    };
   },
 });
 

@@ -1,5 +1,9 @@
 import { User } from "better-auth/types";
-import { Affiliation, AffiliationDocument } from "./affiliation.model";
+import {
+  Affiliation,
+  AffiliationDocument,
+  affiliationModel,
+} from "./affiliation.model";
 import affiliationMongodb from "./repository/affiliation.mongodb";
 import { AffiliationRepo } from "./repository/affiliation.repo";
 import { AddUsersToAffiliationDto } from "./dto/add-users-to-aff.dto";
@@ -7,6 +11,7 @@ import createHttpError from "http-errors";
 import { ObjectId } from "mongodb";
 import { auth } from "@/utils/auth";
 import { CreateAffiliationDto } from "@kltn/contract/api/affiliation";
+import { transformObjectId } from "@/helper/transform-objectId.helper";
 
 class AffiliationService {
   private affiliationRepo: AffiliationRepo;
@@ -93,6 +98,124 @@ class AffiliationService {
 
   async getAllUsersInAffiliation(id: string): Promise<string[] | undefined> {
     return this.affiliationRepo.getAllUsersInAffiliation(id);
+  }
+
+  async getAffiliationWithDescendants(id: string | ObjectId) {
+    return affiliationModel
+      .aggregate([
+        // 1. Match the starting document
+        {
+          $match: {
+            _id: transformObjectId(id), // _id of "UET"
+          },
+        },
+
+        // 2. Use $graphLookup to find ALL descendants recursively
+        {
+          $graphLookup: {
+            from: "affiliations",
+            startWith: "$_id",
+            connectFromField: "_id",
+            connectToField: "parent",
+            as: "all_descendants_temp",
+            // maxDepth: 10, // Optional depth limit
+            // "depthField": "level" // Optional depth field
+          },
+        },
+
+        // 3. Create a single array containing the root and all descendants
+        {
+          $project: {
+            root_doc: {
+              _id: "$_id",
+              name: "$name",
+              parent: "$parent",
+              users: "$users", // Keep original user IDs for now
+              createdAt: "$createdAt",
+              updatedAt: "$updatedAt",
+              authors: "$authors", // Keep original author IDs for now
+            },
+            descendant_docs: "$all_descendants_temp",
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            allItems: {
+              $concatArrays: [["$root_doc"], "$descendant_docs"],
+            },
+          },
+        },
+
+        // 4. Unwind the combined array
+        {
+          $unwind: "$allItems",
+        },
+
+        // 5. Promote each item to the root
+        {
+          $replaceRoot: { newRoot: "$allItems" },
+        },
+
+        // 6. Lookup IMMEDIATE children for the 'descendants' field
+        {
+          $lookup: {
+            from: "affiliations",
+            localField: "_id",
+            foreignField: "parent",
+            as: "immediate_children",
+          },
+        },
+
+        // ***** NEW: Lookup Users *****
+        {
+          $lookup: {
+            from: "user", // The collection containing user documents
+            localField: "users", // The field in 'affiliations' holding user ObjectIDs
+            foreignField: "_id", // The field in 'users' to match against (usually _id)
+            as: "populated_users", // Store the matched user documents here
+          },
+        },
+
+        // 7. Project the final desired structure, now including populated users/authors
+        {
+          $project: {
+            _id: 1,
+            name: 1,
+            parent: 1,
+            // "users": 1, // Original users array (optional, can remove)
+            // "authors": 1, // Original authors array (optional, can remove)
+            createdAt: 1,
+            updatedAt: 1,
+
+            // Replace original arrays with populated ones
+            users: "$populated_users",
+            authors: 1,
+
+            // Create the descendants array using immediate children's _ids
+            // "descendants": {
+            //   "$map": {
+            //     "input": "$immediate_children",
+            //     "as": "child",
+            //     "in": "$$child._id"
+            //   }
+            // }
+
+            // We don't need these temporary fields in the final output
+            // "immediate_children": 0,
+            // "populated_users": 0, // Already assigned above
+            // "populated_authors": 0 // Already assigned above
+          },
+        },
+
+        // add sort by createdAt
+        {
+          $sort: {
+            createdAt: 1,
+          },
+        },
+      ])
+      .toArray();
   }
 
   async checkAffiliationPermission(

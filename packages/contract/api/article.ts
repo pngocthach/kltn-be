@@ -68,6 +68,14 @@ export const articleContract = c.router(
         201: c.type<Job>(),
       },
     },
+
+    getArticle: {
+      method: "GET",
+      path: "articles/:id",
+      responses: {
+        200: ArticleResponseDto,
+      },
+    },
   },
   {
     pathPrefix: "/api/",

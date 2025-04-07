@@ -9,14 +9,8 @@ export const CreateAffiliationDto = z.object({
   admin: z
     .object({
       email: z.string().email("Please enter a valid email address"),
-      name: z
-        .string()
-        .min(2, "Admin name must be at least 2 characters.")
-        .optional(),
-      password: z
-        .string()
-        .min(8, "Password must be at least 8 characters.")
-        .optional(),
+      name: z.string().optional(),
+      password: z.string().optional(),
     })
     .optional()
     .refine(
@@ -55,6 +49,18 @@ export const AffiliationResponseDto = z.object({
   updatedAt: z.string(),
 });
 
+const CreateUserDto = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters.").optional(),
+  email: z.string().email("Please enter a valid email address."),
+  password: z.string().min(8, "Password must be at least 8 characters."),
+});
+
+export const UpdateAffiliationDto = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters.").optional(),
+  parent: z.string().optional(),
+  admins: z.array(CreateUserDto).optional(),
+});
+
 export const affiliationContract = c.router(
   {
     createAffiliation: {
@@ -88,6 +94,24 @@ export const affiliationContract = c.router(
       path: "affiliations",
       responses: {
         200: AffiliationResponseDto.array(),
+      },
+    },
+
+    editAffiliation: {
+      method: "PATCH",
+      path: "affiliation/:id",
+      body: UpdateAffiliationDto,
+      responses: {
+        200: z.any(),
+      },
+    },
+    deleteAffiliation: {
+      method: "DELETE",
+      path: "affiliation/:id",
+      responses: {
+        200: z.object({
+          message: z.string(),
+        }),
       },
     },
   },

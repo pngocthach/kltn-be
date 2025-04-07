@@ -41,7 +41,10 @@ export type CreateAuthorDto = z.infer<typeof CreateAuthorDto>;
 export const UpdateAuthorDto = z.object({
   name: z.string().optional(),
   url: z.string().url().optional(),
-  affiliation: z.string().optional(), // This will be the affiliation ID
+  affiliation: z
+    .string()
+    .regex(/^[0-9a-f]{24}$/) // This will be the affiliation ID
+    .optional(),
   schedule: z.number().optional(),
 });
 

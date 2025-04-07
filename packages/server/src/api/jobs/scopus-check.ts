@@ -29,7 +29,7 @@ async function getThresholds() {
 }
 
 console.log("Starting Scopus check...");
-console.log("threshold:", await getThresholds());
+console.log(">>> threshold:", await getThresholds());
 
 async function readScopusData(): Promise<ScopusArticle[]> {
   try {

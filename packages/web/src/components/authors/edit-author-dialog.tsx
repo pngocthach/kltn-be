@@ -59,23 +59,24 @@ export function EditAuthorDialog({
   onSubmit,
   isLoading,
 }: EditAuthorDialogProps) {
+  const { data: affiliationsData } =
+    tsr.affiliation.getRawAffiliations.useQuery({
+      queryKey: ["/api/raw-affiliations"],
+    });
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: author.name,
       url: author.url,
-      // If author.affiliation is an array, take the last (most specific) one
-      // If it's a string (ID), use it directly
+      // Fix: Get the affiliation ID correctly
       affiliation: Array.isArray(author.affiliation)
-        ? author.affiliation[author.affiliation.length - 1]
+        ? affiliationsData?.body.find(
+            (aff) => aff.name === author.affiliation[0]
+          )?._id || ""
         : author.affiliation,
     },
   });
-
-  const { data: affiliationsData } =
-    tsr.affiliation.getRawAffiliations.useQuery({
-      queryKey: ["/api/raw-affiliations"],
-    });
 
   // Get the current affiliation path as a string
   const getCurrentAffiliationPath = () => {
@@ -97,7 +98,7 @@ export function EditAuthorDialog({
     const updatedAuthor = {
       name: values.name,
       url: values.url,
-      affiliation: values.affiliation, // This will be the affiliation ID
+      affiliation: values.affiliation, // This will now be the correct ID
       _id: author._id,
     };
     onSubmit(updatedAuthor);
@@ -153,15 +154,7 @@ export function EditAuthorDialog({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Affiliation</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    // TODO: change API to return ID and name
-                    defaultValue={
-                      affiliationsData?.body.find(
-                        (aff) => aff.name === author.affiliation[0]
-                      )?._id
-                    }
-                  >
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select affiliation" />

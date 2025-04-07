@@ -63,9 +63,9 @@ export function AppSidebar() {
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={() => nav("/duplicate-articles")}>
+            <SidebarMenuButton onClick={() => nav("/similar-articles")}>
               <Copy className="h-4 w-4" />
-              <span>Duplicate Articles</span>
+              <span>Similar Articles</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>

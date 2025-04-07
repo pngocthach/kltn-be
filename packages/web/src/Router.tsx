@@ -10,6 +10,7 @@ import AuthorsPage from "./page/Author-page";
 import ArticlePage from "./page/Article-page";
 import ArticleDetailPage from "./page/Article-detail-page";
 import CrawlJobsPage from "./page/CrawlJobs-page";
+import SimilarArticlesPage from "./page/Similar-articles-page";
 
 export const router = createBrowserRouter([
   {
@@ -25,6 +26,14 @@ export const router = createBrowserRouter([
     element: (
       <Layout>
         <ArticlePieChart />
+      </Layout>
+    ),
+  },
+  {
+    path: "/similar-articles",
+    element: (
+      <Layout>
+        <SimilarArticlesPage />
       </Layout>
     ),
   },

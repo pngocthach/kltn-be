@@ -2,9 +2,16 @@ import { Request, Response, NextFunction } from "express";
 import { fromNodeHeaders } from "better-auth/node";
 import { auth } from "../utils/auth";
 import { User } from "better-auth";
+import { ObjectId } from "mongodb";
+import {
+  AffiliationDocument,
+  affiliationModel,
+} from "@/api/affiliation/affiliation.model";
+import { transformObjectId } from "@/helper/transform-objectId.helper";
 
 export interface AuthenticatedRequest extends Request {
   user?: User;
+  affiliation: AffiliationDocument;
 }
 
 export const authMiddleware = async (
@@ -22,6 +29,13 @@ export const authMiddleware = async (
     }
 
     req.user = session.user;
+    console.log(">>> user", req.user);
+
+    // get affiliation
+    req.affiliation = await affiliationModel.findOne({
+      users: transformObjectId(req.user.id),
+    });
+    console.log(">>> affiliation", req.affiliation);
 
     next();
   } catch (error) {

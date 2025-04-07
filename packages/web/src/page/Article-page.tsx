@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { data, Link } from "react-router-dom";
 import {
   Calendar,
   ExternalLink,
@@ -69,7 +69,7 @@ export default function ArticlesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(5);
-  const [articles, setArticles] = useState<any>([]);
+  let [articles, setArticles] = useState<any>([]);
   const [editingArticle, setEditingArticle] = useState<Article | null>(null);
   const [deletingArticleId, setDeletingArticleId] = useState<string | null>(
     null
@@ -79,11 +79,14 @@ export default function ArticlesPage() {
     tsr.article.getArticles.useQuery({
       queryKey: ["/api/articles"],
     });
-  useEffect(() => {
-    if (!isLoading && articlesResponse) {
-      setArticles(articlesResponse.body);
-    }
-  }, [isLoading, articlesResponse]);
+
+  if (isLoading || !articlesResponse) {
+    return <div>Loading...</div>;
+  }
+
+  if (articlesResponse) {
+    articles = articlesResponse.body;
+  }
 
   // Filter articles based on search query
   const filteredArticles = articles.filter(

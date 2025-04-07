@@ -34,6 +34,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { tsr } from "@/App";
+import { toast } from "sonner";
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -52,11 +53,13 @@ const formSchema = z.object({
 export function CreateAffiliationButton() {
   const [open, setOpen] = useState(false);
 
-  // get affiliations from API using tanstack query
-  const { data: affiliationsResponse, isLoading } =
-    tsr.affiliation.getAffiliations.useQuery({
-      queryKey: ["/api/affiliations"],
-    });
+  const {
+    data: affiliationsResponse,
+    isLoading,
+    refetch,
+  } = tsr.affiliation.getAffiliations.useQuery({
+    queryKey: ["/api/affiliations"],
+  });
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -67,11 +70,35 @@ export function CreateAffiliationButton() {
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    // In a real app, this would create the affiliation and admin account
-    console.log(values);
-    setOpen(false);
-    form.reset();
+  const { mutate: createAffiliation, isPending: isCreating } =
+    tsr.affiliation.createAffiliation.useMutation({
+      onSuccess: async () => {
+        toast.success("Affiliation created successfully");
+        setOpen(false);
+        form.reset();
+        await refetch();
+      },
+      onError: (error) => {
+        toast.error("Failed to create affiliation", {
+          description: error.toString(),
+        });
+      },
+    });
+
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    createAffiliation({
+      body: {
+        name: values.name,
+        parent: values.parentId,
+        admin: values.adminEmail
+          ? {
+              email: values.adminEmail,
+              name: values.adminName,
+              password: values.adminPassword,
+            }
+          : undefined,
+      },
+    });
   }
 
   return (
@@ -200,7 +227,9 @@ export function CreateAffiliationButton() {
               />
             </div>
             <DialogFooter>
-              <Button type="submit">Create</Button>
+              <Button type="submit" disabled={isCreating}>
+                {isCreating ? "Creating..." : "Create"}
+              </Button>
             </DialogFooter>
           </form>
         </Form>

@@ -5,8 +5,13 @@ import { authorModel, authorSchema } from "./author.model";
 import validate, { validateObjectId } from "@/middlewares/validate.middleware";
 import { initServer, TsRestRequest } from "@ts-rest/express";
 import { authorContract } from "@kltn/contract";
-import { affiliationModel } from "../affiliation/affiliation.model";
+import {
+  AffiliationDocument,
+  affiliationModel,
+} from "../affiliation/affiliation.model";
 import { ObjectId } from "mongodb";
+import affiliationService from "../affiliation/affiliation.service";
+// import { RequestWithUser } from "@/types/ts-rest";
 
 // const router = Router();
 
@@ -38,8 +43,21 @@ import { ObjectId } from "mongodb";
 
 const s = initServer();
 const router = s.router(authorContract, {
-  getAuthors: async () => {
-    const authors = await authorModel.find().toArray();
+  getAuthors: async ({ req }) => {
+    const reqAffiliation: AffiliationDocument = req["affiliation"];
+    const permittedAffiliation =
+      await affiliationService.getAffiliationWithDescendants(
+        reqAffiliation._id
+      );
+    const permittedAuthorIds = permittedAffiliation.flatMap(
+      (affiliation) => affiliation.authors
+    );
+
+    console.log(">>> permittedAuthorIds:", permittedAuthorIds);
+
+    const authors = await authorModel
+      .find({ _id: { $in: permittedAuthorIds } })
+      .toArray();
     for (const author of authors) {
       const affiliations = await affiliationModel
         .aggregate([
@@ -92,9 +110,9 @@ const router = s.router(authorContract, {
     };
   },
 
-  createAuthor: async ({ body, req }) => {
-    console.log(body);
-    const author = await authorService.createAuthor(req["user"], body);
+  createAuthor: async ({ req }) => {
+    console.log(req.body);
+    const author = await authorService.createAuthor(req["user"], req.body);
     return {
       status: 201,
       body: author,

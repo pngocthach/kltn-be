@@ -35,6 +35,41 @@ await connectDB();
 await rabbitMQ.initialize();
 await startConsumer();
 
+const allowedOrigins = [
+  "http://localhost:5000",
+  "http://localhost:5173",
+  "http://test.localhost:5173",
+  "http://admin.localhost:5173",
+  "http://localhost.lol:5173",
+  "http://test.localhost.lol:5173",
+  "http://admin.localhost.lol:5173",
+];
+
+// Global CORS middleware
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    // allowedHeaders: [
+    //   "Content-Type",
+    //   "Authorization",
+    //   "X-Requested-With",
+    //   "Accept",
+    //   "Origin",
+    // ],
+    exposedHeaders: ["Set-Cookie"],
+  })
+);
+
+const authOpenApiDocument = await auth.api.generateOpenAPISchema();
+
 const openApiDocument = generateOpenApi(contract, {
   info: {
     title: "Posts API",
@@ -58,64 +93,9 @@ app.use(
       },
       {
         title: "Authentication", // optional, would fallback to 'API #1'
-        content: `{
-        "openapi": "3.0.0",
-        "info": {
-          "title": "Authentication API",
-          "version": "1.0.0",
-          "description": "A simple authentication API with email and password."
-        },
-        "paths": {
-          "/api/auth/sign-in/email": {
-            "post": {
-              "summary": "Authenticate user and return a token",
-              "requestBody": {
-                "required": true,
-                "content": {
-                  "application/json": {
-                    "schema": {
-                      "type": "object",
-                      "properties": {
-                        "email": { "type": "string", "example": "test@mail.com" },
-                        "password": { "type": "string", "example": "1311" }
-                      },
-                      "required": ["email", "password"]
-                    }
-                  }
-                }
-              },
-              "responses": {
-                "200": {
-                  "description": "Successful authentication",
-                  "content": {
-                    "application/json": {
-                      "schema": {
-                        "type": "object",
-                        "properties": {
-                          "token": { "type": "string", "example": "eyJhbGciOiJI..." }
-                        }
-                      }
-                    }
-                  }
-                },
-                "401": {
-                  "description": "Invalid credentials"
-                }
-              }
-            }
-          }
-        }
-      }
-      `,
+        content: authOpenApiDocument,
       },
     ],
-  })
-);
-
-app.use(
-  cors({
-    origin: [env.CORS_ORIGIN],
-    credentials: true,
   })
 );
 
@@ -133,13 +113,19 @@ createExpressEndpoints(contract.article, articleContractRoute, app);
 createExpressEndpoints(contract.author, authorRoute, app, {
   globalMiddleware: [authMiddleware],
 });
-createExpressEndpoints(contract.affiliation, affiliationContractRoute, app);
+createExpressEndpoints(contract.affiliation, affiliationContractRoute, app, {
+  globalMiddleware: [authMiddleware],
+});
 createExpressEndpoints(contract.jobs, jobsRoute, app);
+createExpressEndpoints(contract.similarArticle, similiarArticleRoute, app, {
+  globalMiddleware: [authMiddleware],
+});
 
 app.get("/", (req, res) => {
   res.send("Hello World!");
 });
 import scopusCheckRouter from "./api/jobs/scopus-check";
+import similiarArticleRoute from "./api/article/similiar-article.route";
 app.use("/api", scopusCheckRouter);
 
 app.all(/(.*)/, routeNotFoundMiddleware);

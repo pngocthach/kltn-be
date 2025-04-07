@@ -27,21 +27,17 @@ const LoginPage: React.FC = () => {
     setError(null);
 
     try {
-      const { data, error } = await authClient.signIn.email(
-        {
-          email,
-          password,
-        },
-        {
-          onSuccess: () => navigate("/"),
-        }
-      );
+      const { data, error } = await authClient.signIn.email({
+        email,
+        password,
+      });
 
       if (error) {
         setError(error.message as string);
       } else {
         // Handle successful login here
         console.log(data);
+        navigate("/"); // Move navigation here
       }
     } catch {
       setError("An unexpected error occurred.");

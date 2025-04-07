@@ -1,12 +1,9 @@
 import { CronJob } from "cron";
-import { connectDB } from "@/configs/mongodb";
 import { ObjectId } from "mongodb";
 import { differenceInDays } from "date-fns";
 import { QUEUES, rabbitMQ } from "@/configs/rabbitmq";
 import { authorModel } from "@/api/author/author.model";
-
-const db = await connectDB();
-const jobModel = db.collection("jobs");
+import { jobModel } from "./jobs.model";
 
 export const scheduledCrawlJob = new CronJob(
   "0 0 * * *", // Run at midnight every day

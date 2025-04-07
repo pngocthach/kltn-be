@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   ChevronRight,
   MoreHorizontal,
@@ -7,6 +7,7 @@ import {
   Trash,
   Users2,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import { EditAdminDialog } from "@/components/affiliations/edit-admin-dialog";
 import { EditAffiliationDialog } from "@/components/affiliations/edit-affiliation-dialog";
@@ -20,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { tsr } from "@/App";
+import { AffiliationResponse as Affiliation } from "@kltn/contract/api/affiliation";
 
 interface User {
   _id: string;
@@ -28,16 +30,6 @@ interface User {
   emailVerified: boolean;
   createdAt: string;
   updatedAt: string;
-}
-
-interface Affiliation {
-  _id: string;
-  name: string;
-  parent?: string;
-  users: User[];
-  createdAt: string;
-  updatedAt: string;
-  authors?: string[];
 }
 
 interface AffiliationItemProps {
@@ -54,6 +46,7 @@ interface AffiliationItemProps {
     id: string,
     data: { name: string; parent?: string }
   ) => void;
+  refetch: () => void;
 }
 
 function AffiliationItem({
@@ -64,14 +57,19 @@ function AffiliationItem({
   onDelete,
   onEditAdmin,
   onEditAffiliation,
+  refetch,
 }: AffiliationItemProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [isEditingAdmin, setIsEditingAdmin] = useState(false);
   const [isEditingAffiliation, setIsEditingAffiliation] = useState(false);
   const [isAddingChild, setIsAddingChild] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   // Find child affiliations
-  const children = allAffiliations.filter((a) => a.parent === affiliation._id);
+  const children = useMemo(
+    () => allAffiliations.filter((a) => a.parent === affiliation._id),
+    [allAffiliations, affiliation._id]
+  );
   const hasChildren = children.length > 0;
 
   return (
@@ -108,29 +106,47 @@ function AffiliationItem({
               )}
             </div>
           </div>
-          <DropdownMenu>
+          <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8">
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setIsEditingAffiliation(true)}>
+              <DropdownMenuItem
+                onClick={() => {
+                  setIsEditingAffiliation(true);
+                  setIsDropdownOpen(false);
+                }}
+              >
                 <Pencil className="mr-2 h-4 w-4" />
                 Edit Affiliation
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setIsEditingAdmin(true)}>
+              <DropdownMenuItem
+                onClick={() => {
+                  setIsEditingAdmin(true);
+                  setIsDropdownOpen(false);
+                }}
+              >
                 <Users2 className="mr-2 h-4 w-4" />
                 Edit Administrators
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setIsAddingChild(true)}>
+              <DropdownMenuItem
+                onClick={() => {
+                  setIsAddingChild(true);
+                  setIsDropdownOpen(false);
+                }}
+              >
                 <Plus className="mr-2 h-4 w-4" />
                 Add Child Affiliation
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="text-destructive"
-                onClick={() => onDelete(affiliation._id)}
+                onClick={() => {
+                  onDelete(affiliation._id);
+                  setIsDropdownOpen(false);
+                }}
               >
                 <Trash className="mr-2 h-4 w-4" />
                 Delete
@@ -158,19 +174,13 @@ function AffiliationItem({
           onEditAffiliation(affiliation._id, values);
           setIsEditingAffiliation(false);
         }}
+        onSuccess={refetch}
       />
       <CreateChildAffiliationDialog
         open={isAddingChild}
         onOpenChange={setIsAddingChild}
         parentAffiliation={affiliation}
-        onSubmit={(values) => {
-          onAddChild(affiliation._id, {
-            name: values.name,
-            adminName: values.adminName,
-            adminEmail: values.adminEmail,
-          });
-          setIsAddingChild(false);
-        }}
+        refetch={refetch}
       />
       {hasChildren && isExpanded && (
         <div className="ml-4 space-y-2 border-l pl-4">
@@ -184,6 +194,7 @@ function AffiliationItem({
               onDelete={onDelete}
               onEditAdmin={onEditAdmin}
               onEditAffiliation={onEditAffiliation}
+              refetch={refetch}
             />
           ))}
         </div>
@@ -193,74 +204,54 @@ function AffiliationItem({
 }
 
 export function AffiliationTree() {
-  const [affiliations, setAffiliations] = useState<Affiliation[]>([]);
-  const { data, isLoading, error } =
-    tsr.affiliation.getRawAffiliations.useQuery({
-      queryKey: ["/api/raw-affiliations"],
+  const { data, isLoading, error, refetch } =
+    tsr.affiliation.getAffiliations.useQuery({
+      queryKey: ["/api/affiliations"],
+      // Add these options to prevent unnecessary refetches
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,
+      staleTime: 30000,
     });
 
-  useEffect(() => {
-    if (!isLoading && data) {
-      setAffiliations(data.body as Affiliation[]);
-    }
-  }, [data, isLoading]);
+  const [creatingChildFor, setCreatingChildFor] = useState<Affiliation | null>(
+    null
+  );
+
+  const { mutate: deleteAffiliation } =
+    tsr.affiliation.deleteAffiliation.useMutation({
+      onSuccess: async () => {
+        toast.success("Affiliation deleted successfully");
+        await refetch();
+      },
+      onError: (error) => {
+        toast.error("Failed to delete affiliation", {
+          description: error.toString(),
+        });
+      },
+    });
 
   if (isLoading || error || !data || !data.body) {
     return <div>Unable to render data</div>;
   }
 
   // Get root level affiliations
-  const rootAffiliations = affiliations.filter((a) => !a.parent);
+  const rootAffiliations = data.body.filter((a) => !a.parent);
 
   console.log("rootAffiliations:", rootAffiliations);
-  console.log("affiliations:", affiliations);
+  console.log("affiliations:", data.body);
 
   if (rootAffiliations.length === 0) {
     return <div>No affiliations found</div>;
   }
 
-  // Add all other affiliations here
-
-  // Update the handleAddChild function to include adminPassword
-  const handleAddChild = (
-    parentId: string,
-    data: {
-      name: string;
-      adminName?: string;
-      adminEmail?: string;
-      adminPassword?: string;
+  const handleDelete = async (id: string) => {
+    if (
+      window.confirm(
+        "Are you sure you want to delete this affiliation and all its children? This action cannot be undone."
+      )
+    ) {
+      deleteAffiliation({ params: { id } });
     }
-  ) => {
-    // In a real app, this would call an API to create a new child affiliation
-    console.log("Adding child to:", parentId, data);
-
-    // For demo purposes, create a new affiliation
-    const newAffiliation: Affiliation = {
-      _id: `new-${Date.now()}`,
-      name: data.name,
-      parent: parentId,
-      users: data.adminEmail
-        ? [
-            {
-              _id: `user-${Date.now()}`,
-              name: data.adminName || data.adminEmail,
-              email: data.adminEmail,
-              emailVerified: false,
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            },
-          ]
-        : [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    // setAffiliations([...affiliations, newAffiliation]);
-  };
-
-  const handleDelete = (id: string) => {
-    // In a real app, this would show a confirmation dialog
-    console.log("Delete:", id);
   };
 
   const handleEditAdmin = (id: string, users: User[]) => {
@@ -277,20 +268,34 @@ export function AffiliationTree() {
   };
 
   return (
-    <div className="rounded-lg border">
-      <div className="p-4">
-        {rootAffiliations.map((affiliation) => (
-          <AffiliationItem
-            key={affiliation._id}
-            affiliation={affiliation}
-            allAffiliations={data.body as Affiliation[]}
-            onAddChild={handleAddChild}
-            onDelete={handleDelete}
-            onEditAdmin={handleEditAdmin}
-            onEditAffiliation={handleEditAffiliation}
-          />
-        ))}
+    <>
+      <div className="rounded-lg border">
+        <div className="p-4">
+          {rootAffiliations.map((affiliation) => (
+            <AffiliationItem
+              key={affiliation._id}
+              affiliation={affiliation}
+              allAffiliations={data.body}
+              onAddChild={(aff) => setCreatingChildFor(aff)}
+              onDelete={handleDelete}
+              onEditAdmin={handleEditAdmin}
+              onEditAffiliation={handleEditAffiliation}
+              refetch={refetch}
+            />
+          ))}
+        </div>
       </div>
-    </div>
+
+      {creatingChildFor && (
+        <CreateChildAffiliationDialog
+          open={!!creatingChildFor}
+          onOpenChange={(open) => {
+            if (!open) setCreatingChildFor(null);
+          }}
+          parentAffiliation={creatingChildFor}
+          refetch={refetch}
+        />
+      )}
+    </>
   );
 }

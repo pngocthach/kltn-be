@@ -7,89 +7,47 @@ import {
   Users2,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
-interface ArticleMetadata {
-  Authors: string;
-  "Publication date"?: { $date: string };
-  Conference?: string;
-  Journal?: string;
-
-  [key: string]: any;
-}
-
-interface Article {
-  _id: string;
-  title: string;
-  link: string;
-  metadata: ArticleMetadata;
-}
-
-// This would normally come from an API or database
-const getArticle = (id: string): Article => {
-  const articles: Article[] = [
-    {
-      _id: "67b89e84c0674fd3ba558006",
-      title: "A Novel Method for High-Fidelity Web Element Identification",
-      link: "https://scholar.google.com/citations?view_op=view_citation&hl=en&user=7gFdUb4AAAAJ&sortby=pubdate&citation_for_view=7gFdUb4AAAAJ:4fKUyHm3Qg0C",
-      metadata: {
-        Authors:
-          "Le-Khanh Trinh, Bui-The Cong, Pham-Hoang An, Hoang-Van Quyen, Cao-Thi-Minh Tam, Pham Ngoc Hung",
-        "Publication date": {
-          $date: "2024-01-01T00:00:00.000Z",
-        },
-        Conference:
-          "The 16th International Conference on Knowledge and Systems Engineering (KSE 2024)",
-        Abstract:
-          "This paper presents a novel method for high-fidelity web element identification using advanced machine learning techniques. Our approach combines visual features with contextual information to accurately identify and locate web elements across different websites and applications. Experimental results show that our method outperforms existing approaches by a significant margin.",
-        Keywords:
-          "Web Element Identification, Machine Learning, Computer Vision, Web Automation",
-      },
-    },
-    {
-      _id: "67b89e85c0674fd3ba558007",
-      title:
-        "Improving Web Element Detection with Visual and Contextual Features",
-      link: "https://scholar.google.com/citations?view_op=view_citation&hl=en&user=7gFdUb4AAAAJ&citation_for_view=7gFdUb4AAAAJ:d1gkVwhDpl0C",
-      metadata: {
-        Authors: "Le-Khanh Trinh, Nguyen Ha Thanh, Nguyen Thi Minh Huyen",
-        "Publication date": {
-          $date: "2023-09-15T00:00:00.000Z",
-        },
-        Journal: "IEEE Transactions on Software Engineering",
-        Volume: "49",
-        Issue: "9",
-        Pages: "3721-3736",
-        Abstract:
-          "Web element detection is a critical task in web automation and testing. This paper proposes a novel approach that combines visual features with contextual information to improve the accuracy of web element detection. Our method achieves state-of-the-art performance on benchmark datasets.",
-        Keywords:
-          "Web Element Detection, Visual Features, Contextual Features, Web Automation",
-      },
-    },
-    {
-      _id: "67b89e86c0674fd3ba558009",
-      title: "A Comprehensive Survey of Web Element Identification Techniques",
-      link: "https://scholar.google.com/citations?view_op=view_citation&hl=en&user=7gFdUb4AAAAJ&citation_for_view=7gFdUb4AAAAJ:u5HHmVD_uO8C",
-      metadata: {
-        Authors: "Le-Khanh Trinh, Pham Ngoc Hung, Nguyen Thi Minh Huyen",
-        "Publication date": {
-          $date: "2023-06-22T00:00:00.000Z",
-        },
-        Journal: "ACM Computing Surveys",
-        Volume: "55",
-        Issue: "4",
-        Pages: "1-34",
-      },
-    },
-  ];
-
-  return articles.find((article) => article._id === id) || articles[0];
-};
+import { tsr } from "@/App";
 
 export default function ArticlePage() {
-  const params = useParams<{ id: string }>();
-  const article = getArticle(params.id || "");
+  const { id } = useParams<{ id: string }>();
+
+  const { data: response, isLoading } = tsr.article.getArticle.useQuery({
+    queryKey: ["/api/articles", id!],
+    queryData: {
+      params: { id: id! },
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto py-6">
+        <div className="flex items-center justify-center">
+          Loading article details...
+        </div>
+      </div>
+    );
+  }
+
+  if (!response?.body) {
+    return (
+      <div className="container mx-auto py-6">
+        <div className="flex flex-col items-center justify-center gap-4">
+          <p className="text-muted-foreground">Article not found</p>
+          <Link
+            to="/articles"
+            className="flex items-center text-sm text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Articles
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const article = response.body;
   const authors = article.metadata.Authors.split(", ");
 
   // Extract metadata fields for display
@@ -180,6 +138,9 @@ export default function ArticlePage() {
       <Tabs defaultValue="metadata" className="space-y-4">
         <TabsList>
           <TabsTrigger value="metadata">Metadata</TabsTrigger>
+          {article.metadata.Abstract && (
+            <TabsTrigger value="abstract">Abstract</TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="metadata">
@@ -211,6 +172,16 @@ export default function ArticlePage() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {article.metadata.Abstract && (
+          <TabsContent value="abstract">
+            <Card>
+              <CardContent className="pt-6">
+                <p className="leading-7">{article.metadata.Abstract}</p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

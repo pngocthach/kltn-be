@@ -1,4 +1,3 @@
-"use client";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -20,43 +19,69 @@ import { Input } from "@/components/ui/input";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
+import { toast } from "sonner";
+import { tsr } from "@/App";
 
-interface Affiliation {
-  _id: string;
-  name: string;
-}
-
-const formSchema = z.object({
-  name: z.string().min(2, {
-    message: "Name must be at least 2 characters.",
-  }),
-  adminEmail: z
-    .string()
-    .email({
-      message: "Please enter a valid email address.",
-    })
-    .optional(),
-  adminName: z
-    .string()
-    .min(2, {
-      message: "Admin name must be at least 2 characters.",
-    })
-    .optional(),
-  adminPassword: z.string().optional(),
-});
+const formSchema = z
+  .object({
+    name: z.string().min(2, {
+      message: "Name must be at least 2 characters.",
+    }),
+    adminEmail: z
+      .union([
+        z.string().email({
+          message: "Please enter a valid email address.",
+        }),
+        z.string().length(0),
+      ])
+      .optional(),
+    adminName: z
+      .union([
+        z.string().min(2, {
+          message: "Admin name must be at least 2 characters.",
+        }),
+        z.string().length(0),
+      ])
+      .optional(),
+    adminPassword: z.string().optional(),
+  })
+  .refine(
+    (data) => {
+      // If any admin field is provided, email must be present and valid
+      if (
+        (data.adminName && data.adminName.length > 0) ||
+        (data.adminPassword && data.adminPassword.length > 0)
+      ) {
+        return (
+          !!data.adminEmail &&
+          data.adminEmail.length > 0 &&
+          data.adminEmail.includes("@")
+        );
+      }
+      return true;
+    },
+    {
+      message: "Admin email is required when providing admin details",
+      path: ["adminEmail"],
+    }
+  );
 
 interface CreateChildAffiliationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  parentAffiliation: Affiliation;
-  onSubmit: (values: z.infer<typeof formSchema> & { parentId: string }) => void;
+  parentAffiliation: {
+    _id: string;
+    name: string;
+  };
+  onSubmit?: (value) => void;
+  refetch: () => void;
 }
 
 export function CreateChildAffiliationDialog({
   open,
   onOpenChange,
   parentAffiliation,
-  onSubmit,
+  refetch,
 }: CreateChildAffiliationDialogProps) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -68,12 +93,33 @@ export function CreateChildAffiliationDialog({
     },
   });
 
-  function handleSubmit(values: z.infer<typeof formSchema>) {
-    onSubmit({
-      ...values,
-      parentId: parentAffiliation._id,
+  const { mutate: createAffiliation, isPending: isCreating } =
+    tsr.affiliation.createAffiliation.useMutation({
+      onSuccess: () => {
+        toast.success("Child affiliation created successfully");
+        onOpenChange(false);
+        form.reset();
+        refetch();
+      },
+      onError: (error) => {
+        toast.error("Failed to create child affiliation: " + error);
+      },
     });
-    form.reset();
+
+  function onSubmit(values: z.infer<typeof formSchema>) {
+    createAffiliation({
+      body: {
+        name: values.name,
+        parent: parentAffiliation._id,
+        admin: values.adminEmail
+          ? {
+              email: values.adminEmail,
+              name: values.adminName,
+              password: values.adminPassword,
+            }
+          : undefined,
+      },
+    });
   }
 
   return (
@@ -82,14 +128,11 @@ export function CreateChildAffiliationDialog({
         <DialogHeader>
           <DialogTitle>Create Child Affiliation</DialogTitle>
           <DialogDescription>
-            Create a new affiliation under {parentAffiliation.name}.
+            Create a new child affiliation under {parentAffiliation.name}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(handleSubmit)}
-            className="space-y-4"
-          >
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-4">
               <FormField
                 control={form.control}
@@ -155,7 +198,9 @@ export function CreateChildAffiliationDialog({
               />
             </div>
             <DialogFooter>
-              <Button type="submit">Create</Button>
+              <Button type="submit" disabled={isCreating}>
+                {isCreating ? "Creating..." : "Create"}
+              </Button>
             </DialogFooter>
           </form>
         </Form>

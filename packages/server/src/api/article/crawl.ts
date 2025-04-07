@@ -9,11 +9,11 @@ import { Router } from "express";
 import stringSimilarity from "string-similarity";
 import { configModel } from "@/api/remote-config/config.model";
 import { WithId } from "mongodb";
+import { similarArticleModel } from "./similar-articles.model";
 
 const db = await connectDB();
 const articleModel = db.collection("article");
 const authorModel = db.collection("authors");
-const duplicateArticleModel = db.collection("duplicate_articles");
 
 async function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -67,6 +67,7 @@ async function findSimilarArticles(title: string, existingArticles: any[]) {
   };
 }
 
+// TODO: fix type
 async function handleArticleInsertion(
   article: any,
   existingArticles: any[],
@@ -75,67 +76,45 @@ async function handleArticleInsertion(
   const { similarity, matchingArticle, isMatch, isPotentialDuplicate } =
     await findSimilarArticles(article.title, existingArticles);
 
+  console.log(
+    `>>> Processing article: ${article.title} (similarity: ${similarity})`
+  );
+
   if (isMatch) {
-    console.log(`Found exact match for article: ${article.title}`);
-    // Check if author already has this article
-    const author = await authorModel.findOne({
-      _id: new ObjectId(authorId),
-      articles: matchingArticle._id,
-    });
-
-    await authorModel.updateOne(
-      { _id: new ObjectId(authorId) },
-      { $addToSet: { articles: matchingArticle._id } }
-    );
-
-    if (!author) {
-      console.log(`Adding existing article to author's list: ${article.title}`);
-      return {
-        processedArticle: null,
-        articleId: matchingArticle._id,
-      };
-    }
-
-    console.log(`Article already in author's list: ${article.title}`);
     return {
       processedArticle: null,
-      articleId: null,
+      articleId: matchingArticle._id,
     };
   }
 
+  // First insert as a new article
+  const articleResult = await articleModel.insertOne({ ...article });
+  const newArticleId = articleResult.insertedId;
+
+  // If it's a potential duplicate, save to similarArticleModel
   if (isPotentialDuplicate) {
-    console.log(`Potential duplicate found for: ${article.title}`);
-    const duplicateDoc = {
-      ...article,
+    console.log(`>>>Potential duplicate found for: ${article.title}`);
+    await similarArticleModel.insertOne({
+      articleId: newArticleId,
+      title: article.title,
       similarTo: {
         articleId: matchingArticle._id,
         title: matchingArticle.title,
         similarity,
       },
-      status: "pending_review",
-      createdAt: new Date(),
-    };
-    const result = await duplicateArticleModel.insertOne(duplicateDoc);
-    return {
-      processedArticle: { ...duplicateDoc, _id: result.insertedId },
-      articleId: result.insertedId,
-    };
+    });
   }
 
-  // No match found, insert as new article
-  const result = await articleModel.insertOne(article);
-  await authorModel.updateOne(
-    { _id: new ObjectId(authorId) },
-    { $addToSet: { articles: result.insertedId } }
-  );
   return {
-    processedArticle: { ...article, _id: result.insertedId },
-    articleId: result.insertedId,
+    processedArticle: { ...article, _id: newArticleId },
+    articleId: newArticleId,
   };
 }
 
 export async function crawl(url: string, authorId: string) {
-  const browser = await puppeteer.launch();
+  const browser = await puppeteer.launch({
+    headless: false,
+  });
   const page = await browser.newPage();
 
   try {
@@ -154,12 +133,17 @@ export async function crawl(url: string, authorId: string) {
       );
     });
 
+    if (articles.length === 0) {
+      throw new Error("No articles found");
+    }
+
     // Fetch all existing articles once
     const existingArticles = await articleModel.find().toArray();
 
     const results = [];
     const articleIdsToAdd = [];
 
+    console.log(`>>>Total articles: ${articles.length}`);
     for (const article of articles) {
       const enrichedArticle = await getMetadata(page, article);
       const { processedArticle, articleId } = await handleArticleInsertion(
@@ -171,16 +155,21 @@ export async function crawl(url: string, authorId: string) {
       if (processedArticle) {
         results.push(processedArticle);
       }
+      if (!articleId) {
+        console.log(`>>>Article already exists: ${enrichedArticle.title}`);
+      }
       if (articleId) {
         articleIdsToAdd.push(articleId);
       }
     }
 
+    console.log(`>>>Total new articles: ${articleIdsToAdd.length}`);
+
     // Batch update author's articles list if there are new articles to add
     if (articleIdsToAdd.length > 0) {
       await authorModel.updateOne(
         { _id: new ObjectId(authorId) },
-        { $addToSet: { articles: { $each: articleIdsToAdd } } }
+        { $set: { articles: articleIdsToAdd } }
       );
     }
 
