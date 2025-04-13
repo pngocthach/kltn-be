@@ -76,11 +76,12 @@ async function handleArticleInsertion(
   const { similarity, matchingArticle, isMatch, isPotentialDuplicate } =
     await findSimilarArticles(article.title, existingArticles);
 
-  console.log(
-    `>>> Processing article: ${article.title} (similarity: ${similarity})`
-  );
+  // console.log(
+  //   `>>> Processing article: ${article.title} (similarity: ${similarity})`
+  // );
 
   if (isMatch) {
+    console.log(`>>>Article already exists: ${article.title}`);
     return {
       processedArticle: null,
       articleId: matchingArticle._id,
@@ -93,7 +94,7 @@ async function handleArticleInsertion(
 
   // If it's a potential duplicate, save to similarArticleModel
   if (isPotentialDuplicate) {
-    console.log(`>>>Potential duplicate found for: ${article.title}`);
+    // console.log(`>>>Potential duplicate found for: ${article.title}`);
     await similarArticleModel.insertOne({
       articleId: newArticleId,
       title: article.title,

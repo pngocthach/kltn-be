@@ -2,6 +2,10 @@ import { Router } from "express";
 import { chartContract } from "@kltn/contract";
 import { initServer } from "@ts-rest/express";
 import { connectDB } from "@/configs/mongodb";
+import { transformObjectId } from "@/helper/transform-objectId.helper";
+import { ObjectId } from "mongodb";
+import { AffiliationDocument } from "../affiliation/affiliation.model";
+import affiliationService from "../affiliation/affiliation.service";
 
 const db = await connectDB();
 const articleModel = db.collection("article");
@@ -10,22 +14,41 @@ const affiliationModel = db.collection("affiliations");
 
 const s = initServer();
 const router = s.router(chartContract, {
-  getTotalArticles: {
-    middleware: [
-      (req, res, next) => {
-        console.log("Middleware 1");
-        next();
+  getTotalArticles: async ({ req }) => {
+    const reqAffiliation: AffiliationDocument = req["affiliation"];
+
+    const user = req["user"];
+
+    const permittedAffiliation =
+      await affiliationService.getAffiliationWithDescendants(
+        reqAffiliation._id
+      );
+    const permittedAuthorIds = permittedAffiliation.flatMap(
+      (affiliation) => affiliation.authors
+    );
+    const authors = await authorModel
+      .find({ _id: { $in: permittedAuthorIds } })
+      .toArray();
+    const articleSet: Set<string> = new Set();
+    authors.forEach((author) => {
+      author.articles &&
+        author.articles.forEach((articleId) => {
+          articleSet.add(articleId.toString());
+        });
+    });
+
+    const articlesId = Array.from(articleSet).map((articleId) =>
+      transformObjectId(articleId)
+    );
+
+    return {
+      status: 200,
+      body: {
+        total: await articleModel.countDocuments({
+          _id: { $in: articlesId },
+        }),
       },
-    ],
-    handler: async (req) => {
-      console.log(req.headers.cookie);
-      return {
-        status: 200,
-        body: {
-          total: await articleModel.countDocuments(),
-        },
-      };
-    },
+    };
   },
 
   getLineChartData: async () => {

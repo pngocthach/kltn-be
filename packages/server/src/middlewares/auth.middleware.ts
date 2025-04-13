@@ -29,13 +29,11 @@ export const authMiddleware = async (
     }
 
     req.user = session.user;
-    console.log(">>> user", req.user);
 
     // get affiliation
     req.affiliation = await affiliationModel.findOne({
       users: transformObjectId(req.user.id),
     });
-    console.log(">>> affiliation", req.affiliation);
 
     next();
   } catch (error) {

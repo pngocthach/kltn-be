@@ -106,19 +106,25 @@ app.all(/\/api\/auth\/.*/, toNodeHandler(auth));
 app.use(express.json());
 // app.use("/api", authMiddleware, authorRoute);
 // app.use("/api/affiliation", authMiddleware, affiliationRoute);
-app.use("/api/article", articleRoute);
+// app.use("/api/article", authMiddleware, articleRoute);
 
-createExpressEndpoints(contract.chart, chartRoute, app);
-createExpressEndpoints(contract.article, articleContractRoute, app);
+createExpressEndpoints(contract.chart, chartRoute, app, {
+  globalMiddleware: [authMiddleware as any],
+});
+createExpressEndpoints(contract.article, articleContractRoute, app, {
+  globalMiddleware: [authMiddleware as any],
+});
 createExpressEndpoints(contract.author, authorRoute, app, {
-  globalMiddleware: [authMiddleware],
+  globalMiddleware: [authMiddleware as any],
 });
 createExpressEndpoints(contract.affiliation, affiliationContractRoute, app, {
-  globalMiddleware: [authMiddleware],
+  globalMiddleware: [authMiddleware as any],
 });
-createExpressEndpoints(contract.jobs, jobsRoute, app);
+createExpressEndpoints(contract.jobs, jobsRoute, app, {
+  globalMiddleware: [authMiddleware as any],
+});
 createExpressEndpoints(contract.similarArticle, similiarArticleRoute, app, {
-  globalMiddleware: [authMiddleware],
+  globalMiddleware: [authMiddleware as any],
 });
 
 app.get("/", (req, res) => {
