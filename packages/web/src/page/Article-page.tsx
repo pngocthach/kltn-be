@@ -1,18 +1,42 @@
-import { useEffect, useState } from "react";
-import { data, Link } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { Search, MoreHorizontal, CalendarIcon } from "lucide-react";
 import {
-  Calendar,
-  ExternalLink,
-  Filter,
-  MoreHorizontal,
-  Pencil,
-  Search,
-  Trash,
-} from "lucide-react";
+  format,
+  addMonths,
+  addYears,
+  startOfMonth,
+  endOfMonth,
+  startOfYear,
+  endOfYear,
+  subMonths,
+  subYears,
+} from "date-fns";
+import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { ExternalLink } from "lucide-react";
+import { Link } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis,
+} from "@/components/ui/pagination";
+import { MultiSelect } from "@/components/ui/multi-select";
 import {
   Select,
   SelectContent,
@@ -20,463 +44,511 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { EditArticleDialog } from "@/components/articles/edit-article-dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { tsr } from "@/App";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
+import { ArticleFiltersSidebar } from "@/components/article-filters-sidebar";
 
-interface ArticleMetadata {
-  Authors: string;
-  "Publication date"?: { $date: string };
-  Conference?: string;
-  Journal?: string;
+const formatPublicationDate = (dateString: string): string => {
+  if (!dateString) return "";
 
-  [key: string]: any;
-}
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "";
+    return format(date, "dd/MM/yyyy");
+  } catch (error) {
+    console.error("Date formatting error:", error);
+    return "";
+  }
+};
 
-interface Article {
-  _id: string;
-  title: string;
-  link: string;
-  metadata: ArticleMetadata;
-}
-
-export default function ArticlesPage() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(5);
-  let [articles, setArticles] = useState<any>([]);
-  const [editingArticle, setEditingArticle] = useState<Article | null>(null);
-  const [deletingArticleId, setDeletingArticleId] = useState<string | null>(
-    null
+const DateRangePopover = ({ dateRange, setDateRange }) => {
+  const [startDateInput, setStartDateInput] = useState(
+    dateRange.from ? format(dateRange.from, "dd/MM/yyyy") : ""
+  );
+  const [endDateInput, setEndDateInput] = useState(
+    dateRange.to ? format(dateRange.to, "dd/MM/yyyy") : ""
   );
 
-  const { data: articlesResponse, isLoading } =
-    tsr.article.getArticles.useQuery({
-      queryKey: ["/api/articles"],
-    });
+  const handleManualDateInput = (value: string, isStart: boolean) => {
+    const [day, month, year] = value.split("/").map(Number);
+    const date = new Date(year, month - 1, day);
 
-  if (isLoading || !articlesResponse) {
-    return <div>Loading...</div>;
-  }
-
-  if (articlesResponse) {
-    articles = articlesResponse.body;
-  }
-
-  // Filter articles based on search query
-  const filteredArticles = articles.filter(
-    (article) =>
-      article.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      article.metadata.Authors.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  // Calculate pagination
-  const totalItems = filteredArticles.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
-  const currentArticles = filteredArticles.slice(startIndex, endIndex);
-
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-  };
-
-  const handleItemsPerPageChange = (value: string) => {
-    setItemsPerPage(Number.parseInt(value));
-    setCurrentPage(1); // Reset to first page when changing items per page
-  };
-
-  const handleEditArticle = (updatedArticle: Article) => {
-    // In a real app, this would call an API to update the article
-    setArticles(
-      articles.map((article) =>
-        article._id === updatedArticle._id ? updatedArticle : article
-      )
-    );
-    setEditingArticle(null);
-  };
-
-  const handleDeleteArticle = (id: string) => {
-    // In a real app, this would call an API to delete the article
-    setArticles(articles.filter((article) => article._id !== id));
-    setDeletingArticleId(null);
-  };
-
-  // Generate pagination items
-  const generatePaginationItems = () => {
-    const items: any[] = [];
-    const maxVisiblePages = 5; // Maximum number of page links to show
-
-    if (totalPages <= maxVisiblePages) {
-      // Show all pages if there are fewer than maxVisiblePages
-      for (let i = 1; i <= totalPages; i++) {
-        items.push(
-          <PaginationItem key={i}>
-            <PaginationLink
-              isActive={currentPage === i}
-              onClick={() => handlePageChange(i)}
-            >
-              {i}
-            </PaginationLink>
-          </PaginationItem>
-        );
-      }
-    } else {
-      // Always show first page
-      items.push(
-        <PaginationItem key={1}>
-          <PaginationLink
-            isActive={currentPage === 1}
-            onClick={() => handlePageChange(1)}
-          >
-            1
-          </PaginationLink>
-        </PaginationItem>
-      );
-
-      // Show ellipsis if current page is far from the first page
-      if (currentPage > 3) {
-        items.push(
-          <PaginationItem key="ellipsis-1">
-            <PaginationEllipsis />
-          </PaginationItem>
-        );
-      }
-
-      // Show pages around current page
-      const startPage = Math.max(2, currentPage - 1);
-      const endPage = Math.min(totalPages - 1, currentPage + 1);
-
-      for (let i = startPage; i <= endPage; i++) {
-        items.push(
-          <PaginationItem key={i}>
-            <PaginationLink
-              isActive={currentPage === i}
-              onClick={() => handlePageChange(i)}
-            >
-              {i}
-            </PaginationLink>
-          </PaginationItem>
-        );
-      }
-
-      // Show ellipsis if current page is far from the last page
-      if (currentPage < totalPages - 2) {
-        items.push(
-          <PaginationItem key="ellipsis-2">
-            <PaginationEllipsis />
-          </PaginationItem>
-        );
-      }
-
-      // Always show last page
-      if (totalPages > 1) {
-        items.push(
-          <PaginationItem key={totalPages}>
-            <PaginationLink
-              isActive={currentPage === totalPages}
-              onClick={() => handlePageChange(totalPages)}
-            >
-              {totalPages}
-            </PaginationLink>
-          </PaginationItem>
-        );
+    if (!isNaN(date.getTime())) {
+      if (isStart) {
+        setDateRange({ ...dateRange, from: date });
+        setStartDateInput(value);
+      } else {
+        setDateRange({ ...dateRange, to: date });
+        setEndDateInput(value);
       }
     }
-
-    return items;
   };
 
-  return (
-    <div className="container mx-auto py-6">
-      <div className="mb-8 space-y-4">
-        <h1 className="text-3xl font-bold tracking-tight">Articles</h1>
-        <p className="text-muted-foreground">
-          Browse and search through all published articles.
-        </p>
-      </div>
+  const presetOptions = [
+    {
+      label: "Today",
+      getValue: () => ({
+        from: new Date(),
+        to: new Date(),
+      }),
+    },
+    {
+      label: "This Month",
+      getValue: () => ({
+        from: startOfMonth(new Date()),
+        to: new Date(),
+      }),
+    },
+    {
+      label: "Last Month",
+      getValue: () => ({
+        from: startOfMonth(subMonths(new Date(), 1)),
+        to: endOfMonth(subMonths(new Date(), 1)),
+      }),
+    },
+    {
+      label: "This Year",
+      getValue: () => ({
+        from: startOfYear(new Date()),
+        to: new Date(),
+      }),
+    },
+    {
+      label: "Last Year",
+      getValue: () => ({
+        from: startOfYear(subYears(new Date(), 1)),
+        to: endOfYear(subYears(new Date(), 1)),
+      }),
+    },
+  ];
 
-      {/* Search and filters */}
-      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="relative flex-1 md:max-w-sm">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search articles..."
-            className="w-full pl-8"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-        <div className="flex flex-wrap gap-4">
-          <Select defaultValue="all">
-            <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="Filter by year" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Years</SelectItem>
-              <SelectItem value="2024">2024</SelectItem>
-              <SelectItem value="2023">2023</SelectItem>
-              <SelectItem value="2022">2022</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select defaultValue="all">
-            <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="Sort by" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Most Recent</SelectItem>
-              <SelectItem value="title">Title A-Z</SelectItem>
-            </SelectContent>
-          </Select>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Show:</span>
-            <Select
-              value={itemsPerPage.toString()}
-              onValueChange={handleItemsPerPageChange}
+  return (
+    <PopoverContent className="flex w-auto p-0" align="start">
+      <div className="border-r border-border">
+        <div className="p-2 w-[150px]">
+          {presetOptions.map((preset) => (
+            <Button
+              key={preset.label}
+              variant="ghost"
+              className="w-full justify-start text-left font-normal mb-1 px-2"
+              onClick={() => {
+                const range = preset.getValue();
+                setDateRange(range);
+                setStartDateInput(format(range.from, "dd/MM/yyyy"));
+                setEndDateInput(format(range.to, "dd/MM/yyyy"));
+              }}
             >
-              <SelectTrigger className="w-[80px]">
-                <SelectValue placeholder="5" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="3">3</SelectItem>
-                <SelectItem value="5">5</SelectItem>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="15">15</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <Button variant="outline" size="icon">
-            <Filter className="h-4 w-4" />
+              {preset.label}
+            </Button>
+          ))}
+          <div className="border-t border-border my-2" />
+          <Button
+            variant="ghost"
+            className="w-full justify-start text-left font-normal mb-1 px-2"
+            onClick={() => {
+              setDateRange({});
+              setStartDateInput("");
+              setEndDateInput("");
+            }}
+          >
+            Reset
           </Button>
         </div>
       </div>
+      <div className="p-3">
+        <div className="flex flex-col gap-4">
+          <div className="flex gap-4">
+            {/* Start Date Input */}
+            <div className="flex flex-col gap-2">
+              <Label>Start Date</Label>
+              <Input
+                placeholder="DD/MM/YYYY"
+                value={startDateInput}
+                onChange={(e) => {
+                  setStartDateInput(e.target.value);
+                  handleManualDateInput(e.target.value, true);
+                }}
+                className="w-[120px]"
+              />
+            </div>
+            {/* End Date Input */}
+            <div className="flex flex-col gap-2">
+              <Label>End Date</Label>
+              <Input
+                placeholder="DD/MM/YYYY"
+                value={endDateInput}
+                onChange={(e) => {
+                  setEndDateInput(e.target.value);
+                  handleManualDateInput(e.target.value, false);
+                }}
+                className="w-[120px]"
+              />
+            </div>
+          </div>
+          <div>
+            <Calendar
+              mode="range"
+              selected={{
+                from: dateRange.from,
+                to: dateRange.to,
+              }}
+              onSelect={(range) => {
+                if (range?.from) {
+                  setStartDateInput(format(range.from, "dd/MM/yyyy"));
+                }
+                if (range?.to) {
+                  setEndDateInput(format(range.to, "dd/MM/yyyy"));
+                }
+                setDateRange(range || {});
+              }}
+              initialFocus
+            />
+          </div>
+        </div>
+      </div>
+    </PopoverContent>
+  );
+};
 
-      {/* Articles list */}
-      <div className="space-y-4">
-        {currentArticles.map((article) => (
-          <Card
-            key={article._id}
-            className="overflow-hidden transition-colors hover:bg-muted/50"
-          >
-            <CardContent className="p-6">
-              <div className="space-y-2">
-                <div className="flex items-start justify-between">
-                  <Link to={`/articles/${article._id}`}>
-                    <h2 className="text-xl font-semibold tracking-tight hover:underline">
-                      {article.title}
-                    </h2>
-                  </Link>
-                  <div className="flex items-center gap-2">
-                    <a
-                      href={article.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-shrink-0 text-muted-foreground hover:text-primary"
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                    </a>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={() => setEditingArticle(article)}
-                        >
-                          <Pencil className="mr-2 h-4 w-4" />
-                          Edit Article
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-destructive"
-                          onClick={() => setDeletingArticleId(article._id)}
-                        >
-                          <Trash className="mr-2 h-4 w-4" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-                <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                  <span>{article.metadata.Authors}</span>
-                </div>
+export default function ArticlesPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [tempSearchQuery, setTempSearchQuery] = useState("");
+  const [selectedAuthors, setSelectedAuthors] = useState<string[]>(
+    searchParams.get("authors")?.split(",").filter(Boolean) || []
+  );
+  const [tempSelectedAuthors, setTempSelectedAuthors] = useState<string[]>(
+    searchParams.get("authors")?.split(",").filter(Boolean) || []
+  );
+  const [selectedAffiliations, setSelectedAffiliations] = useState<string[]>(
+    searchParams.get("affiliations")?.split(",").filter(Boolean) || []
+  );
+  const [tempSelectedAffiliations, setTempSelectedAffiliations] = useState<
+    string[]
+  >(searchParams.get("affiliations")?.split(",").filter(Boolean) || []);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(20); // Changed default to 20
+  const [dateRange, setDateRange] = useState<{
+    from?: Date;
+    to?: Date;
+  }>({});
+  const [tempDateRange, setTempDateRange] = useState<{
+    from?: Date;
+    to?: Date;
+  }>({});
 
-                <div className="flex flex-wrap gap-4 pt-2 text-sm">
-                  {article.metadata["Publication date"] && (
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Calendar className="h-4 w-4" />
-                      <span>
-                        {new Date(
-                          article.metadata["Publication date"].$date
-                        ).toLocaleDateString()}
-                      </span>
-                    </div>
-                  )}
+  const datePresets = [
+    {
+      label: "Last Month",
+      getValue: () => ({
+        from: startOfMonth(subMonths(new Date(), 1)),
+        to: endOfMonth(subMonths(new Date(), 1)),
+      }),
+    },
+    {
+      label: "Last Year",
+      getValue: () => ({
+        from: startOfYear(subYears(new Date(), 1)),
+        to: endOfYear(subYears(new Date(), 1)),
+      }),
+    },
+  ];
 
-                  {article.metadata.Conference && (
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <span className="font-medium">Conference:</span>
-                      <span>{article.metadata.Conference}</span>
-                    </div>
-                  )}
+  // Fetch authors and affiliations for filters
+  const { data: authorsData } = tsr.author.getAuthors.useQuery({
+    queryKey: ["/api/authors"],
+  });
 
-                  {article.metadata.Journal && (
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <span className="font-medium">Journal:</span>
-                      <span>{article.metadata.Journal}</span>
-                    </div>
-                  )}
-                </div>
+  const { data: affiliationsData } =
+    tsr.affiliation.getRawAffiliations.useQuery({
+      queryKey: ["/api/raw-affiliations"],
+    });
 
-                {/* Display additional metadata fields */}
-                <div className="flex flex-wrap gap-2 pt-2">
-                  {Object.entries(article.metadata).map(([key, value]) => {
-                    // Skip already displayed fields
-                    if (
-                      [
-                        "Authors",
-                        "Publication date",
-                        "Conference",
-                        "Journal",
-                      ].includes(key)
-                    ) {
-                      return null;
-                    }
+  // Fetch articles with filters including date range
+  const { data: articlesResponse, isLoading } =
+    tsr.article.getArticles.useQuery({
+      queryKey: [
+        "/api/articles",
+        selectedAuthors,
+        selectedAffiliations,
+        searchQuery,
+        dateRange.from,
+        dateRange.to,
+      ],
+      queryData: {
+        query: {
+          authors: selectedAuthors,
+          affiliations: selectedAffiliations,
+          search: searchQuery || undefined,
+          startDate: dateRange.from?.toISOString(),
+          endDate: dateRange.to?.toISOString(),
+        },
+      },
+    });
 
-                    return (
-                      <div
-                        key={key}
-                        className="rounded-lg bg-muted px-2.5 py-0.5 text-xs font-medium"
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (selectedAuthors.length)
+      params.set("authors", selectedAuthors.join(","));
+    if (selectedAffiliations.length)
+      params.set("affiliations", selectedAffiliations.join(","));
+    if (searchQuery) params.set("search", searchQuery);
+    if (dateRange.from) params.set("from", dateRange.from.toISOString());
+    if (dateRange.to) params.set("to", dateRange.to.toISOString());
+    setSearchParams(params);
+  }, [
+    selectedAuthors,
+    selectedAffiliations,
+    searchQuery,
+    dateRange,
+    setSearchParams,
+  ]);
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedAuthors, selectedAffiliations, searchQuery]);
+
+  if (isLoading) return <div>Loading...</div>;
+  console.log(">>> query:", selectedAuthors, selectedAffiliations, searchQuery);
+
+  const articles = articlesResponse?.body || [];
+
+  // Calculate pagination
+  const totalItems = articles.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+  const currentArticles = articles.slice(startIndex, endIndex);
+
+  const handleApplyFilters = () => {
+    setSearchQuery(tempSearchQuery);
+    setSelectedAuthors(tempSelectedAuthors);
+    setSelectedAffiliations(tempSelectedAffiliations);
+    setDateRange(tempDateRange);
+  };
+
+  const handleResetFilters = () => {
+    setTempSearchQuery("");
+    setTempSelectedAuthors([]);
+    setTempSelectedAffiliations([]);
+    setTempDateRange({});
+    setSearchQuery("");
+    setSelectedAuthors([]);
+    setSelectedAffiliations([]);
+    setDateRange({});
+  };
+
+  return (
+    <div className="h-full w-full bg-background">
+      <div className="mx-auto max-w-screen-xl p-6">
+        {/* Filters Sidebar */}
+        <ArticleFiltersSidebar
+          tempSearchQuery={tempSearchQuery}
+          setTempSearchQuery={setTempSearchQuery}
+          tempSelectedAuthors={tempSelectedAuthors}
+          setTempSelectedAuthors={setTempSelectedAuthors}
+          tempSelectedAffiliations={tempSelectedAffiliations}
+          setTempSelectedAffiliations={setTempSelectedAffiliations}
+          tempDateRange={tempDateRange}
+          setTempDateRange={setTempDateRange}
+          handleApplyFilters={handleApplyFilters}
+          handleResetFilters={handleResetFilters}
+          authorsData={authorsData}
+          affiliationsData={affiliationsData}
+        />
+
+        {/* Active Filters */}
+        {(selectedAuthors.length > 0 ||
+          selectedAffiliations.length > 0 ||
+          searchQuery ||
+          dateRange.from) && (
+          <div className="flex items-center gap-2 mb-6 flex-wrap">
+            <span className="text-sm font-medium text-muted-foreground">
+              Active filters:
+            </span>
+            {searchQuery && (
+              <Badge variant="secondary" className="px-3 py-1">
+                Search: {searchQuery}
+              </Badge>
+            )}
+            {selectedAuthors.map((authorId) => {
+              const author = authorsData?.body.find((a) => a._id === authorId);
+              return author ? (
+                <Badge key={authorId} variant="secondary" className="px-3 py-1">
+                  {author.name}
+                </Badge>
+              ) : null;
+            })}
+            {selectedAffiliations.map((affiliationId) => {
+              const affiliation = affiliationsData?.body.find(
+                (a) => a._id === affiliationId
+              );
+              return affiliation ? (
+                <Badge
+                  key={affiliationId}
+                  variant="secondary"
+                  className="px-3 py-1"
+                >
+                  {affiliation.name}
+                </Badge>
+              ) : null;
+            })}
+            {dateRange.from && (
+              <Badge variant="secondary" className="px-3 py-1">
+                {format(dateRange.from, "LLL dd, y")}
+                {dateRange.to && ` - ${format(dateRange.to, "LLL dd, y")}`}
+              </Badge>
+            )}
+          </div>
+        )}
+
+        {/* Results Section */}
+        <div className="space-y-4">
+          {/* Results Header */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-medium">Results</h2>
+              <Badge variant="outline">{articles.length} articles</Badge>
+            </div>
+            <Select
+              value={itemsPerPage.toString()}
+              onValueChange={(value) => {
+                setItemsPerPage(Number(value));
+                setCurrentPage(1);
+              }}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10 items per page</SelectItem>
+                <SelectItem value="20">20 items per page</SelectItem>
+                <SelectItem value="50">50 items per page</SelectItem>
+                <SelectItem value="100">100 items per page</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Table */}
+          <div className="rounded-lg border bg-card">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-5/12">Title</TableHead>
+                  <TableHead className="w-3/12">Authors</TableHead>
+                  <TableHead className="w-2/12">Publication Date</TableHead>
+                  <TableHead className="w-2/12">Type</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {currentArticles.map((article) => (
+                  <TableRow key={article._id}>
+                    <TableCell>
+                      <Link
+                        to={`/articles/${article._id}`}
+                        className="group flex items-center gap-2"
                       >
-                        {key}:{" "}
-                        {typeof value === "object"
-                          ? JSON.stringify(value)
-                          : value}
+                        <span className="line-clamp-2 group-hover:text-primary">
+                          {article.title}
+                        </span>
+                        <ExternalLink className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </Link>
+                    </TableCell>
+                    <TableCell>
+                      <div
+                        className="line-clamp-1"
+                        title={article.metadata.Authors}
+                      >
+                        {article.metadata.Authors}
                       </div>
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {formatPublicationDate(
+                        article.metadata["Publication date"]
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">
+                        {article.metadata.Journal
+                          ? "Journal"
+                          : article.metadata.Conference
+                          ? "Conference"
+                          : article.metadata.Book
+                          ? "Book"
+                          : "Other"}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Pagination */}
+          <div className="flex items-center justify-between py-4">
+            <div className="text-sm text-muted-foreground">
+              Showing {startIndex + 1} to {endIndex} of {totalItems} results
+            </div>
+            <Pagination>
+              <PaginationContent>
+                {currentPage > 1 && (
+                  <PaginationItem>
+                    <PaginationPrevious
+                      onClick={() => setCurrentPage(currentPage - 1)}
+                    />
+                  </PaginationItem>
+                )}
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter((page) => {
+                    if (page === 1 || page === totalPages) return true;
+                    return Math.abs(currentPage - page) <= 1;
+                  })
+                  .map((page, index, array) => {
+                    if (index > 0 && array[index - 1] !== page - 1) {
+                      return (
+                        <React.Fragment key={`ellipsis-${page}`}>
+                          <PaginationEllipsis />
+                          <PaginationItem>
+                            <PaginationLink
+                              onClick={() => setCurrentPage(page)}
+                              isActive={page === currentPage}
+                            >
+                              {page}
+                            </PaginationLink>
+                          </PaginationItem>
+                        </React.Fragment>
+                      );
+                    }
+                    return (
+                      <PaginationItem key={page}>
+                        <PaginationLink
+                          onClick={() => setCurrentPage(page)}
+                          isActive={page === currentPage}
+                        >
+                          {page}
+                        </PaginationLink>
+                      </PaginationItem>
                     );
                   })}
-                </div>
-
-                <div className="pt-2">
-                  <Link to={`/articles/${article._id}`}>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="px-0 text-primary hover:bg-transparent hover:text-primary/80"
-                    >
-                      View details
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="mt-6 flex flex-col items-center justify-between gap-4 sm:flex-row">
-          <div className="text-sm text-muted-foreground">
-            Showing <span className="font-medium">{startIndex + 1}</span> to{" "}
-            <span className="font-medium">{endIndex}</span> of{" "}
-            <span className="font-medium">{totalItems}</span> articles
+                {currentPage < totalPages && (
+                  <PaginationItem>
+                    <PaginationNext
+                      onClick={() => setCurrentPage(currentPage + 1)}
+                    />
+                  </PaginationItem>
+                )}
+              </PaginationContent>
+            </Pagination>
           </div>
-          <Pagination>
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-                  className={
-                    currentPage === 1 ? "pointer-events-none opacity-50" : ""
-                  }
-                />
-              </PaginationItem>
-
-              {generatePaginationItems()}
-
-              <PaginationItem>
-                <PaginationNext
-                  onClick={() =>
-                    handlePageChange(Math.min(totalPages, currentPage + 1))
-                  }
-                  className={
-                    currentPage === totalPages
-                      ? "pointer-events-none opacity-50"
-                      : ""
-                  }
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
         </div>
-      )}
-
-      {/* Edit Article Dialog */}
-      {editingArticle && (
-        <EditArticleDialog
-          open={!!editingArticle}
-          onOpenChange={(open) => !open && setEditingArticle(null)}
-          article={editingArticle}
-          onSubmit={handleEditArticle}
-        />
-      )}
-
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog
-        open={!!deletingArticleId}
-        onOpenChange={(open) => !open && setDeletingArticleId(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the
-              article and remove it from our servers.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() =>
-                deletingArticleId && handleDeleteArticle(deletingArticleId)
-              }
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      </div>
     </div>
   );
 }

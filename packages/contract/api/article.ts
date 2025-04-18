@@ -52,6 +52,13 @@ export const articleContract = c.router(
     getArticles: {
       method: "GET",
       path: "articles",
+      query: z.object({
+        authors: z.array(z.string()).optional(),
+        affiliations: z.array(z.string()).optional(),
+        search: z.string().optional(),
+        startDate: z.string().optional(), // Add date range
+        endDate: z.string().optional(), // Add date range
+      }),
       responses: {
         200: c.type<z.infer<typeof ArticleResponseDto>[]>(),
       },

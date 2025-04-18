@@ -6,6 +6,7 @@ import { transformObjectId } from "@/helper/transform-objectId.helper";
 import { ObjectId } from "mongodb";
 import { AffiliationDocument } from "../affiliation/affiliation.model";
 import affiliationService from "../affiliation/affiliation.service";
+import articleService from "../article/article.service";
 
 const db = await connectDB();
 const articleModel = db.collection("article");
@@ -19,26 +20,8 @@ const router = s.router(chartContract, {
 
     const user = req["user"];
 
-    const permittedAffiliation =
-      await affiliationService.getAffiliationWithDescendants(
-        reqAffiliation._id
-      );
-    const permittedAuthorIds = permittedAffiliation.flatMap(
-      (affiliation) => affiliation.authors
-    );
-    const authors = await authorModel
-      .find({ _id: { $in: permittedAuthorIds } })
-      .toArray();
-    const articleSet: Set<string> = new Set();
-    authors.forEach((author) => {
-      author.articles &&
-        author.articles.forEach((articleId) => {
-          articleSet.add(articleId.toString());
-        });
-    });
-
-    const articlesId = Array.from(articleSet).map((articleId) =>
-      transformObjectId(articleId)
+    const articlesId = await articleService.getPermittedArticleIds(
+      reqAffiliation._id
     );
 
     return {
@@ -51,9 +34,18 @@ const router = s.router(chartContract, {
     };
   },
 
-  getLineChartData: async () => {
+  getLineChartData: async ({ req }) => {
+    const reqAffiliation: AffiliationDocument = req["affiliation"];
+    const articlesId = await articleService.getPermittedArticleIds(
+      reqAffiliation._id
+    );
     const data = await articleModel
       .aggregate<{ year: number; articles: number }>([
+        {
+          $match: {
+            _id: { $in: articlesId },
+          },
+        },
         {
           $match: {
             "metadata.Publication date": {
@@ -151,16 +143,21 @@ const router = s.router(chartContract, {
     };
   },
 
-  getTotalAuthors: async () => {
+  getTotalAuthors: async ({ req }) => {
+    const reqAffiliation: AffiliationDocument = req["affiliation"];
+    const { permittedAffiliation, permittedAuthorIds } =
+      await affiliationService.getPermittedAffiliation(reqAffiliation._id);
+
     return {
       status: 200,
       body: {
-        total: await authorModel.countDocuments(),
-        increase: await authorModel
-          .find({
-            createdAt: { $gt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
-          })
-          .count(),
+        total: await authorModel.countDocuments({
+          _id: { $in: permittedAuthorIds },
+        }),
+        increase: await authorModel.countDocuments({
+          createdAt: { $gt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
+          _id: { $in: permittedAuthorIds },
+        }),
       },
     };
   },

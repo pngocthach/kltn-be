@@ -239,6 +239,16 @@ class AffiliationService {
       );
     }
   }
+
+  async getPermittedAffiliation(affiliationId: string | ObjectId) {
+    const permittedAffiliation = await this.getAffiliationWithDescendants(
+      affiliationId
+    );
+    const permittedAuthorIds = permittedAffiliation.flatMap(
+      (affiliation) => affiliation.authors
+    );
+    return { permittedAffiliation, permittedAuthorIds };
+  }
 }
 
 export default new AffiliationService();

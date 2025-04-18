@@ -28,6 +28,7 @@
     "http-errors": "^2.0.0",
     "mongoose": "^8.10.0",
     "puppeteer": "^24.2.1",
+    "query-string": "^9.1.1",
     "string-similarity": "^4.0.4"
   },
   "devDependencies": {
