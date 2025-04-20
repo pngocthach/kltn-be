@@ -8,6 +8,8 @@ import affiliationService from "../affiliation/affiliation.service";
 import { authorModel } from "../author/author.model";
 import { ObjectId } from "mongodb";
 import queryString from "query-string";
+import { affiliationModel } from "../affiliation/affiliation.model";
+import affiliationMongodb from "../affiliation/repository/affiliation.mongodb";
 
 const db = await connectDB();
 const articleModel = db.collection("article");
@@ -20,21 +22,48 @@ const router = s.router(articleContract, {
     });
 
     const reqAffiliation: AffiliationDocument = req["affiliation"];
-    let { permittedAffiliation, permittedAuthorIds } =
-      await affiliationService.getPermittedAffiliation(reqAffiliation._id);
 
+    // Get current affiliation and all its descendants
+    const allAffiliations =
+      await affiliationService.getAffiliationWithDescendants(
+        reqAffiliation._id
+      );
+
+    let permittedAuthorIds: ObjectId[] = [];
+
+    // Filter by selected affiliations if any, otherwise use all permitted affiliations
     if (query.affiliations?.length) {
-      permittedAffiliation = permittedAffiliation.filter((affiliation) =>
-        query.affiliations.includes(affiliation._id.toString())
-      );
+      const selectedAffiliations = Array.isArray(query.affiliations)
+        ? query.affiliations
+        : [query.affiliations];
+
+      // selectedAffiliations.push(reqAffiliation._id.toString());
+      const selectedAffiliationDocs =
+        await affiliationMongodb.getFilteredAffiliations(selectedAffiliations);
+
+      // Get all authors from selected affiliations
+      permittedAuthorIds = selectedAffiliationDocs
+        .flatMap((aff) => aff.authors || [])
+        .map((id) => new ObjectId(id.toString()));
+    } else {
+      // If no affiliations selected, use all authors from current and descendant affiliations
+      permittedAuthorIds = allAffiliations
+        .flatMap((aff) => aff.authors || [])
+        .map((id) => new ObjectId(id.toString()));
     }
 
+    // Filter by selected authors if any
     if (query.authors?.length) {
+      const selectedAuthors = Array.isArray(query.authors)
+        ? query.authors
+        : [query.authors];
+
       permittedAuthorIds = permittedAuthorIds.filter((authorId) =>
-        query.authors.includes(authorId.toString())
+        selectedAuthors.includes(authorId.toString())
       );
     }
 
+    // Get all authors
     const authors = await authorModel
       .find({ _id: { $in: permittedAuthorIds } })
       .toArray();
@@ -42,7 +71,7 @@ const router = s.router(articleContract, {
     // Build the base query
     const baseQuery: any = {
       _id: {
-        $in: authors.flatMap((author) => author.articles),
+        $in: authors.flatMap((author) => author.articles || []),
       },
     };
 
@@ -50,7 +79,6 @@ const router = s.router(articleContract, {
     if (query.startDate || query.endDate) {
       const dateFilter: any = {
         $or: [
-          // Handle ISODate format
           {
             "metadata.Publication date": {
               ...(query.startDate && {
@@ -59,7 +87,6 @@ const router = s.router(articleContract, {
               ...(query.endDate && { $lte: new Date(query.endDate as string) }),
             },
           },
-          // Handle string format
           {
             "metadata.Publication date": {
               ...(query.startDate && { $gte: query.startDate as string }),
@@ -72,20 +99,13 @@ const router = s.router(articleContract, {
       Object.assign(baseQuery, dateFilter);
     }
 
-    // Debug log
-    console.log("MongoDB Query:", JSON.stringify(baseQuery, null, 2));
+    // Debug logs
+    console.log("Query params:", query);
 
     // Execute the query
     let articles = await articleModel.find(baseQuery).toArray();
 
-    // Debug log
-    console.log("Found articles:", articles.length);
-    if (articles.length > 0) {
-      console.log(
-        "Sample article publication date:",
-        articles[0].metadata["Publication date"]
-      );
-    }
+    console.log("Found articles count:", articles.length);
 
     // Apply search filter if provided
     if (query.search) {

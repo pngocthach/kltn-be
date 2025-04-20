@@ -190,6 +190,44 @@ class AffiliationMongoDbRepo implements AffiliationRepo {
     }
   }
 
+  async getFilteredAffiliations(filteredAffiliations: string[]) {
+    const result = affiliationModel
+      .aggregate([
+        {
+          $match: {
+            _id: {
+              $in: filteredAffiliations.map((aff) => transformObjectId(aff)),
+            },
+          },
+        },
+        {
+          $graphLookup: {
+            from: "affiliations",
+            startWith: "$_id",
+            connectFromField: "_id",
+            connectToField: "parent",
+            as: "descendants",
+          },
+        },
+        {
+          $project: {
+            allAffiliations: {
+              $concatArrays: [["$$ROOT"], "$descendants"],
+            },
+          },
+        },
+        {
+          $unwind: "$allAffiliations",
+        },
+        {
+          $replaceRoot: { newRoot: "$allAffiliations" },
+        },
+      ])
+      .toArray();
+
+    return result;
+  }
+
   async getAllUsersInAffiliation(id: string): Promise<string[] | undefined> {
     const doc = await affiliationModel
       .aggregate([
