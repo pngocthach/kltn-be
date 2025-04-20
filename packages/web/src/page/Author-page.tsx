@@ -16,7 +16,10 @@ export default function AuthorsPage() {
   });
 
   const handleAuthorClick = (authorId: string) => {
-    navigate(`/articles?authors=${authorId}`);
+    navigate(`/articles?authors=${authorId}`, {
+      replace: true,
+      state: { from: "/authors" },
+    });
   };
 
   return (

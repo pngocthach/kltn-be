@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { authClient } from "../lib/auth-client";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState("");
@@ -8,18 +8,15 @@ const LoginPage: React.FC = () => {
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
-
+  const location = useLocation();
   const { data: session } = authClient.useSession();
-  if (session) {
-    return (
-      <div>
-        You are already logged in.
-        <Link to="/">
-          <button>Back</button>
-        </Link>
-      </div>
-    );
-  }
+
+  useEffect(() => {
+    if (session) {
+      const from = location.state?.from || "/";
+      navigate(from, { replace: true });
+    }
+  }, [session, navigate, location]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();

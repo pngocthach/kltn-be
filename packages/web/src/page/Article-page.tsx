@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useSearchParams, useNavigate, useLocation } from "react-router-dom";
 import { Search, MoreHorizontal, CalendarIcon, ArrowLeft } from "lucide-react";
 import {
   format,
@@ -219,10 +219,21 @@ const DateRangePopover = ({ dateRange, setDateRange }) => {
 export default function ArticlesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // Add back button handler
+  // Check if we should show the back button
+  const shouldShowBackButton = Boolean(
+    location.state?.from || searchParams.has("affiliations")
+  );
+
   const handleBackClick = () => {
-    navigate(-1);
+    if (location.state?.from) {
+      navigate(location.state.from, { replace: true });
+    } else if (searchParams.has("affiliations")) {
+      navigate("/affiliations", { replace: true });
+    } else {
+      navigate(-1);
+    }
   };
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -355,14 +366,13 @@ export default function ArticlesPage() {
   return (
     <div className="h-full w-full bg-background">
       <div className="mx-auto max-w-screen-xl p-6">
-        {/* Add back button if coming from affiliations */}
-        {searchParams.get("affiliations") && (
+        {shouldShowBackButton && (
           <button
             onClick={handleBackClick}
             className="mb-4 flex items-center text-sm text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Affiliations
+            Back
           </button>
         )}
 

@@ -1,25 +1,33 @@
+import { useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { authClient } from "@/lib/auth-client";
-import { useNavigate } from "react-router-dom";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { data: session, error, isPending } = authClient.useSession();
-  const nav = useNavigate();
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  console.log(">>>cookie:", document.cookie);
+  useEffect(() => {
+    if (!isPending && !session) {
+      navigate("/login", {
+        replace: true,
+        state: { from: location.pathname },
+      });
+    }
+  }, [session, isPending, navigate, location]);
 
   if (isPending) {
-    return <div>Loading...</div>; // Show a loading state while checking authentication
+    return <div>Loading...</div>;
   }
 
   if (error) {
-    return <div>Error: {error.message}</div>; // Display an error message if there's an issue with authentication
+    return <div>Error: {error.message}</div>;
   }
 
   if (!session) {
-    nav("/login");
-    return null; // Redirect to the login page if not authenticated
+    return null;
   }
 
   return (

@@ -1,6 +1,7 @@
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import axios from "axios";
 import { useEffect, useState } from "react";
+import { ArrowLeft } from "lucide-react";
 
 export interface Affiliation {
   _id: string;
@@ -19,7 +20,18 @@ interface Author {
 }
 
 function AffiliationDetail() {
-  const { id } = useParams(); // Get the dynamic "id" from the URL
+  const navigate = useNavigate();
+  const { id } = useParams();
+  const location = useLocation();
+
+  const handleBack = () => {
+    if (location.state?.from) {
+      navigate(location.state.from);
+    } else {
+      navigate("/affiliations");
+    }
+  };
+
   const [affiliation, setAffiliation] = useState<Affiliation | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -95,7 +107,13 @@ function AffiliationDetail() {
 
   return (
     <>
-      {" "}
+      <button
+        onClick={handleBack}
+        className="mb-4 flex items-center text-sm text-muted-foreground hover:text-foreground"
+      >
+        <ArrowLeft className="mr-2 h-4 w-4" />
+        Back to Affiliations
+      </button>
       <div>
         {loading && <p>Loading...</p>}
         {error && <p>{error}</p>}

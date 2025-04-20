@@ -1,4 +1,4 @@
-import { Link, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import {
   ArrowLeft,
   BookOpen,
@@ -10,8 +10,18 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { tsr } from "@/App";
 
-export default function ArticlePage() {
-  const { id } = useParams<{ id: string }>();
+export default function ArticleDetailPage() {
+  const navigate = useNavigate();
+  const { id } = useParams();
+  const location = useLocation();
+
+  const handleBack = () => {
+    if (location.state?.from) {
+      navigate(location.state.from);
+    } else {
+      navigate("/articles");
+    }
+  };
 
   const { data: response, isLoading } = tsr.article.getArticle.useQuery({
     queryKey: ["/api/articles", id!],
@@ -35,13 +45,13 @@ export default function ArticlePage() {
       <div className="container mx-auto py-6">
         <div className="flex flex-col items-center justify-center gap-4">
           <p className="text-muted-foreground">Article not found</p>
-          <Link
-            to="/articles"
+          <button
+            onClick={handleBack}
             className="flex items-center text-sm text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Articles
-          </Link>
+            Back
+          </button>
         </div>
       </div>
     );
@@ -64,13 +74,13 @@ export default function ArticlePage() {
   return (
     <div className="container mx-auto py-6">
       {/* Back button */}
-      <Link
-        to="/articles"
+      <button
+        onClick={handleBack}
         className="mb-6 flex items-center text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="mr-2 h-4 w-4" />
-        Back to Articles
-      </Link>
+        Back
+      </button>
 
       {/* Article header */}
       <div className="mb-8 space-y-4">

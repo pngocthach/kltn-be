@@ -1,13 +1,17 @@
+import { useNavigate, useLocation } from "react-router-dom";
 import { AffiliationTree } from "@/components/affiliations/affiliation-tree";
 import { CreateAffiliationButton } from "@/components/affiliations/create-affiliation-button";
-import { useNavigate } from "react-router-dom";
 
 export default function AffiliationsPage() {
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const handleAffiliationClick = (affiliationId: string) => {
-    // Use navigate with { replace: false } to add to history stack
-    navigate(`/articles?affiliations=${affiliationId}`, { replace: false });
+  const handleNavigateToArticles = (affiliationId: string) => {
+    // Use replace instead of push to avoid stacking navigation history
+    navigate(`/articles?affiliations=${affiliationId}`, {
+      replace: true,
+      state: { from: location.pathname },
+    });
   };
 
   return (
@@ -21,7 +25,7 @@ export default function AffiliationsPage() {
         </div>
         <CreateAffiliationButton />
       </div>
-      <AffiliationTree onAffiliationClick={handleAffiliationClick} />
+      <AffiliationTree onAffiliationClick={handleNavigateToArticles} />
     </div>
   );
 }

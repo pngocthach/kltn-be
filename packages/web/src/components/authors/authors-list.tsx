@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Calendar,
   ExternalLink,
@@ -30,6 +31,7 @@ import {
 } from "@/components/ui/table";
 import { tsr } from "@/App";
 import { AuthorResponse as Author } from "@kltn/contract/api/author";
+import { toast } from "sonner";
 
 interface AuthorsListProps {
   onAuthorClick?: (authorId: string) => void;
@@ -37,12 +39,30 @@ interface AuthorsListProps {
 
 export function AuthorsList({ onAuthorClick }: AuthorsListProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  let [authors, setAuthors] = useState<Author[]>([]);
   const [editingAuthor, setEditingAuthor] = useState<Author | null>(null);
   const [crawlingAuthor, setCrawlingAuthor] = useState<Author | null>(null);
 
+  // Define a constant query key to ensure consistency
+  const QUERY_KEY = ["/api/authors"] as const;
+
   const { data, isLoading, refetch } = tsr.author.getAuthors.useQuery({
-    queryKey: ["/api/authors"],
+    queryKey: QUERY_KEY,
+  });
+
+  const deleteMutation = tsr.author.deleteAuthor.useMutation({
+    onMutate: () => {
+      // Disable any UI elements during deletion if needed
+    },
+    onSuccess: () => {
+      toast.success("Author deleted successfully");
+      // Force a hard refetch
+      refetch({ throwOnError: true });
+    },
+    onError: (error) => {
+      toast.error("Failed to delete author", {
+        description: error.toString(),
+      });
+    },
   });
 
   const editMutation = tsr.author.editAuthor.useMutation({
@@ -55,19 +75,15 @@ export function AuthorsList({ onAuthorClick }: AuthorsListProps) {
     return <div>Loading...</div>;
   }
 
-  if (data) {
-    authors = data.body;
-  }
-
   // Filter authors based on search query
-  const filteredAuthors = authors.filter((author) =>
+  const filteredAuthors = (data?.body || []).filter((author) =>
     author.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleDeleteAuthor = (id: string) => {
-    tsr.author.deleteAuthor.mutate({ params: { id } });
-    // In a real app, this would call an API to delete the author
-    setAuthors(authors.filter((author) => author._id !== id));
+    if (window.confirm("Are you sure you want to delete this author?")) {
+      deleteMutation.mutate({ params: { id } });
+    }
   };
 
   const handleEditAuthor = (updatedAuthor: Author) => {
@@ -131,22 +147,32 @@ export function AuthorsList({ onAuthorClick }: AuthorsListProps) {
           </TableHeader>
           <TableBody>
             {filteredAuthors.map((author) => (
-              <TableRow key={author._id}>
+              <TableRow
+                key={author._id}
+                className="cursor-pointer hover:bg-muted"
+                onClick={() => onAuthorClick?.(author._id)}
+              >
                 <TableCell>
-                  <div>
-                    <div className="font-medium">{author.name}</div>
-                    <a
-                      href={author.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary"
-                    >
-                      Google Scholar <ExternalLink className="h-3 w-3" />
-                    </a>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{author.name}</span>
+                    {author.url && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          window.open(author.url, "_blank");
+                        }}
+                        title="Open Google Scholar Profile"
+                      >
+                        <ExternalLink className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                      </Button>
+                    )}
                   </div>
                 </TableCell>
                 <TableCell>
-                  <span className="text-sm">
+                  <span className="text-sm text-muted-foreground">
                     {author.affiliation &&
                       Array.isArray(author.affiliation) &&
                       author.affiliation.join(" > ")}
@@ -154,9 +180,7 @@ export function AuthorsList({ onAuthorClick }: AuthorsListProps) {
                 </TableCell>
                 <TableCell className="text-center">
                   <span className="font-medium">
-                    {author.articles &&
-                      Array.isArray(author.articles) &&
-                      author.articles.length}
+                    {author.articles?.length || 0}
                   </span>
                 </TableCell>
                 <TableCell>
@@ -168,7 +192,12 @@ export function AuthorsList({ onAuthorClick }: AuthorsListProps) {
                   </div>
                 </TableCell>
                 <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
+                  <div
+                    className="flex justify-end gap-2"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {" "}
+                    {/* Prevent row click when clicking actions */}
                     <Button
                       variant="ghost"
                       size="icon"

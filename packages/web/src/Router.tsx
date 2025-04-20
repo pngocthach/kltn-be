@@ -1,4 +1,4 @@
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, Navigate } from "react-router-dom";
 import { NavBar } from "./page/Home-page";
 import LoginPage from "./page/Login-page";
 import AffiliationDetail from "./components/affiliation-detail";
@@ -17,7 +17,7 @@ export const router = createBrowserRouter([
     path: "/",
     element: (
       <Layout>
-        <Dashboard></Dashboard>
+        <Dashboard />
       </Layout>
     ),
   },
@@ -39,28 +39,22 @@ export const router = createBrowserRouter([
   },
   {
     path: "/login",
-    element: (
-      <div style={{ margin: "20px" }}>
-        <NavBar></NavBar>
-        <LoginPage></LoginPage>
-      </div>
-    ),
+    element: <LoginPage />,
   },
   {
-    path: "/affiliations", // Path for the AffiliationTree component
+    path: "/affiliations",
     element: (
       <Layout>
-        <AffiliationsPage></AffiliationsPage>,
+        <AffiliationsPage />
       </Layout>
     ),
   },
   {
-    path: "/affiliations/:id", // Dynamic route for affiliation details
+    path: "/affiliations/:id",
     element: (
-      <div style={{ margin: "20px" }}>
-        <NavBar />
+      <Layout>
         <AffiliationDetail />
-      </div>
+      </Layout>
     ),
   },
   {
@@ -96,13 +90,7 @@ export const router = createBrowserRouter([
     ),
   },
   {
-    // Catch-all route for 404 page. MUST BE LAST
     path: "*",
-    element: (
-      <div style={{ margin: "20px" }}>
-        <NavBar />
-        <div>404 Not Found</div>
-      </div>
-    ),
+    element: <Navigate to="/" replace />,
   },
 ]);
