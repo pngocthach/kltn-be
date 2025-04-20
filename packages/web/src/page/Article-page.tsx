@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
-import { Search, MoreHorizontal, CalendarIcon } from "lucide-react";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import { Search, MoreHorizontal, CalendarIcon, ArrowLeft } from "lucide-react";
 import {
   format,
   addMonths,
@@ -218,6 +218,13 @@ const DateRangePopover = ({ dateRange, setDateRange }) => {
 
 export default function ArticlesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+
+  // Add back button handler
+  const handleBackClick = () => {
+    navigate(-1);
+  };
+
   const [searchQuery, setSearchQuery] = useState("");
   const [tempSearchQuery, setTempSearchQuery] = useState("");
   const [selectedAuthors, setSelectedAuthors] = useState<string[]>(
@@ -348,6 +355,17 @@ export default function ArticlesPage() {
   return (
     <div className="h-full w-full bg-background">
       <div className="mx-auto max-w-screen-xl p-6">
+        {/* Add back button if coming from affiliations */}
+        {searchParams.get("affiliations") && (
+          <button
+            onClick={handleBackClick}
+            className="mb-4 flex items-center text-sm text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Affiliations
+          </button>
+        )}
+
         {/* Filters Sidebar */}
         <ArticleFiltersSidebar
           tempSearchQuery={tempSearchQuery}

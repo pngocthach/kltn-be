@@ -32,21 +32,20 @@ interface User {
   updatedAt: string;
 }
 
+interface AffiliationTreeProps {
+  onAffiliationClick?: (affiliationId: string) => void;
+}
+
 interface AffiliationItemProps {
   affiliation: Affiliation;
   allAffiliations: Affiliation[];
   level?: number;
-  onAddChild: (
-    parentId: string,
-    data: { name: string; adminName?: string; adminEmail?: string }
-  ) => void;
+  onAddChild: (affiliation: Affiliation) => void;
   onDelete: (id: string) => void;
-  onEditAdmin: (id: string, users: User[]) => void;
-  onEditAffiliation: (
-    id: string,
-    data: { name: string; parent?: string }
-  ) => void;
+  onEditAdmin: (affiliation: Affiliation) => void;
+  onEditAffiliation: (affiliation: Affiliation) => void;
   refetch: () => void;
+  onAffiliationClick?: (affiliationId: string) => void;
 }
 
 function AffiliationItem({
@@ -58,54 +57,59 @@ function AffiliationItem({
   onEditAdmin,
   onEditAffiliation,
   refetch,
+  onAffiliationClick,
 }: AffiliationItemProps) {
+  // Change initial state to true
   const [isExpanded, setIsExpanded] = useState(true);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isEditingAdmin, setIsEditingAdmin] = useState(false);
   const [isEditingAffiliation, setIsEditingAffiliation] = useState(false);
   const [isAddingChild, setIsAddingChild] = useState(false);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  // Find child affiliations
-  const children = useMemo(
-    () => allAffiliations.filter((a) => a.parent === affiliation._id),
-    [allAffiliations, affiliation._id]
-  );
+  const children = allAffiliations.filter((a) => a.parent === affiliation._id);
   const hasChildren = children.length > 0;
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-2">
-        <Button
-          variant="ghost"
-          size="icon"
-          className={`h-6 w-6 ${!hasChildren && "invisible"}`}
-          onClick={() => setIsExpanded(!isExpanded)}
-        >
-          <ChevronRight
-            className={`h-4 w-4 transition-transform ${
-              isExpanded ? "rotate-90" : ""
-            }`}
-          />
-        </Button>
+    <div className="mb-2">
+      <div className="flex items-center gap-2 rounded-lg border bg-card p-2">
         <div
-          className="flex flex-1 items-center justify-between rounded-md border px-4 py-2 hover:bg-muted/50"
-          style={{ marginLeft: !hasChildren ? 24 : 0 }}
+          className="flex-1 cursor-pointer hover:bg-muted/50 rounded-md transition-colors"
+          onClick={() => onAffiliationClick?.(affiliation._id)}
         >
-          <div className="flex flex-col gap-1">
-            <span className="font-medium">{affiliation.name}</span>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Users2 className="h-4 w-4" />
-              <span>
-                {affiliation.users && affiliation.users.length} administrators
-              </span>
-              {affiliation.authors && (
-                <>
-                  <span>•</span>
-                  <span>{affiliation.authors.length} authors</span>
-                </>
-              )}
+          <div className="flex items-center gap-2 p-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className={`h-6 w-6 ${!hasChildren && "invisible"}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsExpanded(!isExpanded);
+              }}
+            >
+              <ChevronRight
+                className={`h-4 w-4 transition-transform ${
+                  isExpanded ? "rotate-90" : ""
+                }`}
+              />
+            </Button>
+            <div className="flex flex-col gap-1">
+              <span className="font-medium">{affiliation.name}</span>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Users2 className="h-4 w-4" />
+                <span>
+                  {affiliation.users && affiliation.users.length} administrators
+                </span>
+                {affiliation.authors && (
+                  <>
+                    <span>•</span>
+                    <span>{affiliation.authors.length} authors</span>
+                  </>
+                )}
+              </div>
             </div>
           </div>
+        </div>
+        <div onClick={(e) => e.stopPropagation()}>
           <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -160,7 +164,6 @@ function AffiliationItem({
         onOpenChange={setIsEditingAdmin}
         currentAdmins={affiliation.users || []}
         onSubmit={(values) => {
-          // @ts-expect-error idk
           onEditAdmin(affiliation._id, values.users);
           setIsEditingAdmin(false);
         }}
@@ -170,20 +173,19 @@ function AffiliationItem({
         onOpenChange={setIsEditingAffiliation}
         currentAffiliation={affiliation}
         affiliations={allAffiliations}
-        onSubmit={(values) => {
-          onEditAffiliation(affiliation._id, values);
+        onSuccess={() => {
           setIsEditingAffiliation(false);
+          refetch();
         }}
-        onSuccess={refetch}
       />
       <CreateChildAffiliationDialog
         open={isAddingChild}
-        onOpenChange={setIsAddingChild}
+        onOpenChange={(open) => setIsAddingChild(open)}
         parentAffiliation={affiliation}
         refetch={refetch}
       />
-      {hasChildren && isExpanded && (
-        <div className="ml-4 space-y-2 border-l pl-4">
+      {isExpanded && hasChildren && (
+        <div className="ml-4 mt-2">
           {children.map((child) => (
             <AffiliationItem
               key={child._id}
@@ -195,6 +197,7 @@ function AffiliationItem({
               onEditAdmin={onEditAdmin}
               onEditAffiliation={onEditAffiliation}
               refetch={refetch}
+              onAffiliationClick={onAffiliationClick}
             />
           ))}
         </div>
@@ -203,7 +206,7 @@ function AffiliationItem({
   );
 }
 
-export function AffiliationTree() {
+export function AffiliationTree({ onAffiliationClick }: AffiliationTreeProps) {
   const { data, isLoading, error, refetch } =
     tsr.affiliation.getAffiliations.useQuery({
       queryKey: ["/api/affiliations"],
@@ -281,6 +284,7 @@ export function AffiliationTree() {
               onEditAdmin={handleEditAdmin}
               onEditAffiliation={handleEditAffiliation}
               refetch={refetch}
+              onAffiliationClick={onAffiliationClick}
             />
           ))}
         </div>

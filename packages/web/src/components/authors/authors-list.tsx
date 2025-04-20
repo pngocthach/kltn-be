@@ -31,17 +31,11 @@ import {
 import { tsr } from "@/App";
 import { AuthorResponse as Author } from "@kltn/contract/api/author";
 
-// interface Author {
-//   _id: string;
-//   name: string;
-//   url: string;
-//   createdAt: string;
-//   updatedAt: string;
-//   articles: string[];
-//   affiliation: string[];
-// }
+interface AuthorsListProps {
+  onAuthorClick?: (authorId: string) => void;
+}
 
-export function AuthorsList() {
+export function AuthorsList({ onAuthorClick }: AuthorsListProps) {
   const [searchQuery, setSearchQuery] = useState("");
   let [authors, setAuthors] = useState<Author[]>([]);
   const [editingAuthor, setEditingAuthor] = useState<Author | null>(null);

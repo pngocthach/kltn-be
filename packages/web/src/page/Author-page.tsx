@@ -1,8 +1,10 @@
 import { tsr } from "@/App";
 import { AuthorsList } from "@/components/authors/authors-list";
 import { CreateAuthorButton } from "@/components/authors/create-author-button";
+import { useNavigate } from "react-router-dom";
 
 export default function AuthorsPage() {
+  const navigate = useNavigate();
   const { refetch } = tsr.author.getAuthors.useQuery({
     queryKey: ["/api/authors"],
   });
@@ -12,6 +14,10 @@ export default function AuthorsPage() {
       refetch();
     },
   });
+
+  const handleAuthorClick = (authorId: string) => {
+    navigate(`/articles?authors=${authorId}`);
+  };
 
   return (
     <div className="container mx-auto p-8">
@@ -24,7 +30,7 @@ export default function AuthorsPage() {
         </div>
         <CreateAuthorButton onCreate={mutation.mutate} />
       </div>
-      <AuthorsList />
+      <AuthorsList onAuthorClick={handleAuthorClick} />
     </div>
   );
 }
