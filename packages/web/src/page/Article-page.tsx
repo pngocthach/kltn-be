@@ -223,7 +223,9 @@ export default function ArticlesPage() {
 
   // Check if we should show the back button
   const shouldShowBackButton = Boolean(
-    location.state?.from || searchParams.has("affiliations")
+    location.state?.from ||
+      searchParams.has("affiliations") ||
+      searchParams.has("authors")
   );
 
   const handleBackClick = () => {
@@ -231,6 +233,8 @@ export default function ArticlesPage() {
       navigate(location.state.from, { replace: true });
     } else if (searchParams.has("affiliations")) {
       navigate("/affiliations", { replace: true });
+    } else if (searchParams.has("authors")) {
+      navigate("/authors", { replace: true });
     } else {
       navigate(-1);
     }
