@@ -12,6 +12,14 @@ export const auth = betterAuth({
     enabled: true,
     minPasswordLength: 1,
   },
+  socialProviders: {
+    google: {
+      clientId: env.GOOGLE_CLIENT_ID,
+      clientSecret: env.GOOGLE_CLIENT_SECRET,
+      // redirectURI: "http://localhost:5173/",
+      // callbackURL: `${env.HOST}:${env.PORT}/api/auth/callback/google`,
+    },
+  },
   trustedOrigins: [
     "http://localhost:5173",
     "http://test.localhost:5173",

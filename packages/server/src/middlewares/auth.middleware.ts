@@ -8,6 +8,7 @@ import {
   affiliationModel,
 } from "@/api/affiliation/affiliation.model";
 import { transformObjectId } from "@/helper/transform-objectId.helper";
+import createHttpError from "http-errors";
 
 export interface AuthenticatedRequest extends Request {
   user?: User;
@@ -30,10 +31,16 @@ export const authMiddleware = async (
 
     req.user = session.user;
 
+    console.log(session);
+
     // get affiliation
     req.affiliation = await affiliationModel.findOne({
       users: transformObjectId(req.user.id),
     });
+
+    if (!req.affiliation) {
+      throw new createHttpError.Unauthorized();
+    }
 
     next();
   } catch (error) {

@@ -128,7 +128,7 @@ createExpressEndpoints(contract.similarArticle, similiarArticleRoute, app, {
 });
 
 app.get("/", (req, res) => {
-  res.send("Hello World!");
+  res.redirect("http://localhost:5173");
 });
 import scopusCheckRouter from "./api/jobs/scopus-check";
 import similiarArticleRoute from "./api/article/similiar-article.route";

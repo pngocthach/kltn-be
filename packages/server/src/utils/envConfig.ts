@@ -15,4 +15,6 @@ export const env = cleanEnv(process.env, {
   BETTER_AUTH_URL: str({ devDefault: testOnly("http://localhost:5000") }),
   MONGO_URI: str(),
   RABBITMQ_URI: str(),
+  GOOGLE_CLIENT_ID: str(),
+  GOOGLE_CLIENT_SECRET: str(),
 });

@@ -17,6 +17,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Separator } from "@/components/ui/separator";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -29,6 +30,7 @@ const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { data: session } = authClient.useSession();
+  const [isGoogleLoading, setIsGoogleLoading] = React.useState(false);
 
   const form = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
@@ -66,6 +68,23 @@ const LoginPage: React.FC = () => {
       });
     }
   }
+
+  const handleGoogleSignIn = async () => {
+    try {
+      setIsGoogleLoading(true);
+      await authClient.signIn.social({
+        provider: "google",
+      });
+      // No need to navigate here as the useEffect above will handle redirection after successful login
+    } catch (error) {
+      console.error("Error signing in with Google:", error);
+      form.setError("root", {
+        message: "Failed to sign in with Google. Please try again.",
+      });
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
@@ -119,7 +138,11 @@ const LoginPage: React.FC = () => {
                   {form.formState.errors.root.message}
                 </p>
               )}
-              <Button type="submit" className="w-full" disabled={isSubmitting}>
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={isSubmitting || isGoogleLoading}
+              >
                 {isSubmitting ? (
                   <>
                     <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
@@ -128,6 +151,30 @@ const LoginPage: React.FC = () => {
                 ) : (
                   "Sign in"
                 )}
+              </Button>
+
+              <div className="relative my-4">
+                <Separator />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="bg-background px-2 text-muted-foreground text-sm">
+                    OR
+                  </span>
+                </div>
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={handleGoogleSignIn}
+                disabled={isSubmitting || isGoogleLoading}
+              >
+                {isGoogleLoading ? (
+                  <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Icons.google className="mr-2 h-4 w-4" />
+                )}
+                {isGoogleLoading ? "Signing in..." : "Sign in with Google"}
               </Button>
             </form>
           </Form>
