@@ -1,18 +1,21 @@
 import { defineConfig } from "tsup";
 
 export default defineConfig({
-  entry: ["index.ts"],
-  splitting: true,
+  entry: ["index.ts", "api/**/*.ts"],
+  splitting: false,
   sourcemap: true,
   clean: true,
   format: ["esm"],
   target: "node18",
-  noExternal: ["fs", "path", "os"], // Giữ nguyên các module Node.js
+  dts: true,
+  outDir: "dist",
+  bundle: true,
+  external: [],
   platform: "node",
-  shims: true, // Thêm shims cho các module không tương thích
+  shims: true,
   esbuildOptions(options) {
-    options.banner = {
-      js: 'import { createRequire } from "module"; const require = createRequire(import.meta.url);',
-    };
+    // options.banner = {
+    //   js: 'import { createRequire } from "module"; const require = createRequire(import.meta.url);',
+    // };
   },
 });

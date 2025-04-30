@@ -1,7 +1,21 @@
 {
   "name": "@kltn/contract",
   "version": "1.0.0",
-  "main": "index.ts",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./api/*": {
+      "import": "./dist/api/*.js",
+      "require": "./dist/api/*.js",
+      "types": "./dist/api/*.d.ts"
+    }
+  },
   "license": "MIT",
   "type": "module",
   "scripts": {

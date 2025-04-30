@@ -1,0 +1,80 @@
+services:
+  # Nginx load balancer
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.dev.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/logs:/var/log/nginx # Mount logs directory
+    depends_on:
+      - web
+      - server1
+      - server2
+    networks:
+      - app-network
+    restart: always
+
+  # Web frontend
+  web:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      target: web
+    env_file:
+      - ./packages/web/.env.dev
+    volumes:
+      - ./packages/web:/app/packages/web
+      - /app/packages/web/node_modules
+    networks:
+      - app-network
+    restart: always
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5173"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Server instance 1
+  server1:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      target: server
+    env_file:
+      - ./packages/server/.env.dev
+    volumes:
+      - ./packages/server:/app/packages/server
+      - /app/packages/server/node_modules
+    networks:
+      - app-network
+    restart: always
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Server instance 2
+  server2:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      target: server
+    env_file:
+      - ./packages/server/.env.dev
+    volumes:
+      - ./packages/server:/app/packages/server
+      - /app/packages/server/node_modules
+    networks:
+      - app-network
+    restart: always
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  app-network:
+    driver: bridge

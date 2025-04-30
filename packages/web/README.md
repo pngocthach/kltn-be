@@ -1,50 +1,31 @@
-# React + TypeScript + Vite
+# Deployment Instructions
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Environment Setup
 
-Currently, two official plugins are available:
+1. Copy the example environment files to create your actual .env files:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
-
-- Configure the top-level `parserOptions` property like this:
-
-```js
-export default tseslint.config({
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+```bash
+cp packages/server/.env.example packages/server/.env
+cp packages/web/.env.example packages/web/.env
 ```
 
-- Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
-- Optionally add `...tseslint.configs.stylisticTypeChecked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
+2. Edit the .env files with your actual configuration values:
 
-```js
-// eslint.config.js
-import react from 'eslint-plugin-react'
+- `packages/server/.env`: Configure MongoDB, RabbitMQ, and authentication settings
+- `packages/web/.env`: Configure API URL and other frontend settings
 
-export default tseslint.config({
-  // Set the react version
-  settings: { react: { version: '18.3' } },
-  plugins: {
-    // Add the react plugin
-    react,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended rules
-    ...react.configs.recommended.rules,
-    ...react.configs['jsx-runtime'].rules,
-  },
-})
+## Docker Deployment
+
+Run the following command to start all services:
+
+```bash
+docker-compose up -d
 ```
+
+This will start:
+
+- Nginx load balancer
+- Web frontend
+- Two server instances with load balancing
+
+Access your application at http://localhost

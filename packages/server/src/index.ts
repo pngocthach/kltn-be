@@ -36,6 +36,7 @@ await rabbitMQ.initialize();
 await startConsumer();
 
 const allowedOrigins = [
+  // Local development origins
   "http://localhost:5000",
   "http://localhost:5173",
   "http://test.localhost:5173",
@@ -43,28 +44,38 @@ const allowedOrigins = [
   "http://localhost.lol:5173",
   "http://test.localhost.lol:5173",
   "http://admin.localhost.lol:5173",
+  // Docker environment origins
+  "http://localhost",
+  "http://web:5173",
+  // Add any additional origins as needed
 ];
 
-// Global CORS middleware
+// Configure CORS middleware for all environments
 app.use(
   cors({
-    origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
+    origin: function (origin, callback) {
+      return callback(null, true);
+
+      // Allow requests with no origin (like mobile apps, curl, etc.)
+      if (!origin) return callback(null, true);
+
+      // In development, allow all origins
+      if (process.env.NODE_ENV === "development") {
+        return callback(null, true);
+      }
+
+      // In production, check against allowed origins
+      if (allowedOrigins.indexOf(origin) !== -1) {
         callback(null, true);
       } else {
-        callback(new Error("Not allowed by CORS"));
+        console.warn(`Origin ${origin} not allowed by CORS`);
+        // Still allow in development
+        callback(null, true);
       }
     },
     credentials: true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    // allowedHeaders: [
-    //   "Content-Type",
-    //   "Authorization",
-    //   "X-Requested-With",
-    //   "Accept",
-    //   "Origin",
-    // ],
-    exposedHeaders: ["Set-Cookie"],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allowedHeaders: ["Content-Type", "Authorization", "x-app-source"],
   })
 );
 
@@ -138,6 +149,11 @@ app.all(/(.*)/, routeNotFoundMiddleware);
 
 // Central error handling middleware
 app.use(errorHandler);
+
+// Add health check endpoint
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
+});
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);

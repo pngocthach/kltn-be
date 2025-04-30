@@ -8,6 +8,15 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"),
+      "@kltn/contract": path.resolve(__dirname, "../contract/dist"),
+    },
+  },
+  build: {
+    commonjsOptions: {
+      include: [/node_modules/, /packages\/contract/],
+    },
+    rollupOptions: {
+      external: [],
     },
   },
   server: {
