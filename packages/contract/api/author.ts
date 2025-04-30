@@ -12,6 +12,8 @@ export const AuthorResponseSchema = z.object({
   schedule: z.number().optional(),
   articles: z.array(z.string()), // Array of article IDs (strings)
   affiliation: z.array(z.string()), // Array of affiliations (strings)
+  scopusId: z.string().optional(), // Scopus author ID
+  scholarId: z.string().optional(), // Google Scholar ID
 });
 export type AuthorResponse = z.infer<typeof AuthorResponseSchema>;
 
@@ -23,6 +25,8 @@ export const authorSchema = z.object({
   articles: z.array(z.string()), // Array of article IDs (strings)
   affiliation: z.any(),
   schedule: z.number().optional(),
+  scopusId: z.string().optional(), // Scopus author ID
+  scholarId: z.string().optional(), // Google Scholar ID
 });
 export type Author = z.infer<typeof authorSchema>;
 
@@ -46,6 +50,8 @@ export const UpdateAuthorDto = z.object({
     .regex(/^[0-9a-f]{24}$/) // This will be the affiliation ID
     .optional(),
   schedule: z.number().optional(),
+  scopusId: z.string().optional(), // Allow updating Scopus ID
+  scholarId: z.string().optional(), // Allow updating Google Scholar ID
 });
 
 export type UpdateAuthorDto = z.infer<typeof UpdateAuthorDto>;

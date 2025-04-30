@@ -10,6 +10,8 @@ export const authorSchema = z.object({
   articles: z.array(z.string()), // Array of article IDs (strings)
   affiliation: z.any(), // Array of affiliations (strings)
   schedule: z.number().optional(),
+  scopusId: z.string().optional(), // Scopus author ID
+  scholarId: z.string().optional(), // Google Scholar ID
 });
 
 // export type AuthorDocument = z.infer<typeof zAuthor>;
