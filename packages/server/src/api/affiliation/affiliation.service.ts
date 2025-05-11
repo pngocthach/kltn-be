@@ -167,16 +167,6 @@ class AffiliationService {
           },
         },
 
-        // ***** NEW: Lookup Users *****
-        {
-          $lookup: {
-            from: "user", // The collection containing user documents
-            localField: "users", // The field in 'affiliations' holding user ObjectIDs
-            foreignField: "_id", // The field in 'users' to match against (usually _id)
-            as: "populated_users", // Store the matched user documents here
-          },
-        },
-
         // 7. Project the final desired structure, now including populated users/authors
         {
           $project: {
@@ -188,8 +178,7 @@ class AffiliationService {
             createdAt: 1,
             updatedAt: 1,
 
-            // Replace original arrays with populated ones
-            users: "$populated_users",
+            users: 1,
             authors: 1,
 
             // Create the descendants array using immediate children's _ids

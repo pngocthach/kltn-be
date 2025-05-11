@@ -12,7 +12,6 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -24,30 +23,20 @@ import { useFieldArray, useForm } from "react-hook-form";
 import * as z from "zod";
 import { Trash2 } from "lucide-react";
 
-interface User {
-  _id: string;
-  name: string;
-  email: string;
-  emailVerified: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-const userSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters."),
-  email: z.string().email("Please enter a valid email address."),
-  password: z.string().optional(),
-});
-
 const formSchema = z.object({
-  users: z.array(userSchema).min(1, "At least one administrator is required."),
+  users: z.array(
+    z.object({
+      value: z.string().email("Invalid email format"),
+    })
+  ),
 });
 
 interface EditAdminDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  currentAdmins: User[];
+  currentAdmins: string[];
   onSubmit: (values: z.infer<typeof formSchema>) => void;
+  isLoading?: boolean;
 }
 
 export function EditAdminDialog({
@@ -59,11 +48,7 @@ export function EditAdminDialog({
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      users: currentAdmins.map((admin) => ({
-        name: admin.name,
-        email: admin.email,
-        password: "",
-      })),
+      users: currentAdmins.map((email) => ({ value: email })),
     },
   });
 
@@ -89,47 +74,13 @@ export function EditAdminDialog({
                   <div className="flex-1 space-y-4">
                     <FormField
                       control={form.control}
-                      name={`users.${index}.name`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Administrator Name</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Enter name" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name={`users.${index}.email`}
+                      name={`users.${index}.value`}
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Administrator Email</FormLabel>
                           <FormControl>
                             <Input placeholder="Enter email" {...field} />
                           </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name={`users.${index}.password`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Administrator Password</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="password"
-                              placeholder="Enter password (optional)"
-                              {...field}
-                              value={field.value || ""}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Leave empty to keep current password
-                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -152,7 +103,7 @@ export function EditAdminDialog({
               type="button"
               variant="outline"
               className="w-full"
-              onClick={() => append({ name: "", email: "", password: "" })}
+              onClick={() => append({ value: "" })}
             >
               Add Administrator
             </Button>

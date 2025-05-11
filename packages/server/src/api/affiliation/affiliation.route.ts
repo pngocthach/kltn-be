@@ -89,6 +89,14 @@ const router = s.router(affiliationContract, {
       reqAffiliation._id
     );
 
+    // Remove parent field from root affiliation
+    if (
+      affiliations.length > 0 &&
+      affiliations[0]._id.equals(reqAffiliation._id)
+    ) {
+      delete affiliations[0].parent;
+    }
+
     return {
       status: 200,
       body: affiliations,
@@ -111,7 +119,7 @@ const router = s.router(affiliationContract, {
       });
       await affiliationModel.findOneAndUpdate(
         { _id: affiliation.insertedId },
-        { $addToSet: { users: transformObjectId(admin.user.id) } },
+        { $addToSet: { users: admin.user.email } },
         { returnDocument: "after" }
       );
     }
@@ -123,36 +131,21 @@ const router = s.router(affiliationContract, {
 
   editAffiliation: async ({ params, body }) => {
     if (body.admins) {
-      // update user
-      for (const admin of body.admins) {
-        let user = await userModel.findOne({ email: admin.email });
-        if (!user) {
-          const newUser = await auth.api.createUser({
-            email: admin.email,
-            password: admin.password,
-            name: admin.name || admin.email,
-          });
-          await affiliationModel.updateOne(
-            { _id: new ObjectId(params.id) },
-            { $addToSet: { users: transformObjectId(newUser.user.id) } }
-          );
-        }
-        if (user) {
-          // remove from other affiliations
-          await affiliationModel.updateMany(
-            { users: user._id },
-            { $pull: { users: user._id } }
-          );
-          await affiliationModel.updateOne(
-            { _id: transformObjectId(params.id) },
-            { $addToSet: { users: user._id } }
-          );
-        }
-      }
+      // Only update users (admins) by email
+      const emails = body.admins;
+      await affiliationModel.updateOne(
+        { _id: new ObjectId(params.id) },
+        { $set: { users: emails } }
+      );
+      return {
+        status: 200,
+        body: { message: "Admins updated" },
+      };
     }
 
+    // Otherwise, update name/parent as before
     const affiliation = await affiliationModel.updateOne(
-      { _id: transformObjectId(params.id) },
+      { _id: new ObjectId(params.id) },
       {
         $set: {
           name: body.name,

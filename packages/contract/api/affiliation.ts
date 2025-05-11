@@ -33,18 +33,7 @@ export const AffiliationResponseDto = z.object({
   name: z.string(),
   parent: z.string().optional(),
   authors: z.array(z.any()),
-  users: z
-    .array(
-      z.object({
-        _id: z.string(),
-        name: z.string(),
-        email: z.string(),
-        emailVerified: z.boolean(),
-        createdAt: z.string(),
-        updatedAt: z.string(),
-      })
-    )
-    .optional(),
+  users: z.array(z.string()),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -58,7 +47,7 @@ const CreateUserDto = z.object({
 export const UpdateAffiliationDto = z.object({
   name: z.string().min(2, "Name must be at least 2 characters.").optional(),
   parent: z.string().optional(),
-  admins: z.array(CreateUserDto).optional(),
+  admins: z.array(z.string()).optional(),
 });
 
 export const affiliationContract = c.router(

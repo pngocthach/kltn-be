@@ -16,7 +16,7 @@ const checkAffiliationPermission = (affiliationIdParam: string) => {
     const permittedUsers =
       (await affiliationService.getAllUsersInAffiliation(affiliationId)) || [];
 
-    if (permittedUsers.includes(user!.id)) {
+    if (permittedUsers.includes(user!.email)) {
       return next();
     } else {
       throw new createHttpError.Forbidden(

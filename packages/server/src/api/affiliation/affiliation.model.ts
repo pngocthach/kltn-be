@@ -5,7 +5,7 @@ import { ObjectId, WithId } from "mongodb";
 export const affiliationSchema = z.object({
   name: z.string().min(1).max(255),
   parent: z.union([z.instanceof(ObjectId), z.string()]).optional(),
-  users: z.array(z.union([z.instanceof(ObjectId), z.string()])).optional(),
+  users: z.array(z.string().email()).optional(),
   authors: z.array(z.union([z.instanceof(ObjectId), z.string()])).optional(),
   createdAt: z.date().default(() => new Date()),
   updatedAt: z.date().default(() => new Date()),

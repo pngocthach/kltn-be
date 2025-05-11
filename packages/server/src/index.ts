@@ -13,7 +13,6 @@ import authorRoute from "./api/author/author.route";
 import affiliationRoute from "./api/affiliation/affiliation.route";
 import articleRoute, { setChannel } from "./api/article/crawl";
 import articleContractRoute from "./api/article/article.route";
-import { articleContract, authorContract, chartContract } from "@kltn/contract";
 import { createExpressEndpoints } from "@ts-rest/express";
 import { rabbitMQ } from "./configs/rabbitmq";
 import { startConsumer } from "./api/article/consumer";

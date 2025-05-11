@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useState } from "react";
 import {
   ChevronRight,
   MoreHorizontal,
@@ -23,15 +23,6 @@ import {
 import { tsr } from "@/App";
 import { AffiliationResponse as Affiliation } from "@kltn/contract/api/affiliation";
 
-interface User {
-  _id: string;
-  name: string;
-  email: string;
-  emailVerified: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
 interface AffiliationTreeProps {
   onAffiliationClick?: (affiliationId: string) => void;
 }
@@ -40,12 +31,16 @@ interface AffiliationItemProps {
   affiliation: Affiliation;
   allAffiliations: Affiliation[];
   level?: number;
-  onAddChild: (affiliation: Affiliation) => void;
+  onAddChild: (affiliation: Pick<Affiliation, "_id" | "name">) => void;
   onDelete: (id: string) => void;
-  onEditAdmin: (affiliation: Affiliation) => void;
-  onEditAffiliation: (affiliation: Affiliation) => void;
+  onEditAdmin: (id: string, users: string[]) => void;
+  onEditAffiliation: (
+    id: string,
+    data: { name: string; parent?: string }
+  ) => void;
   refetch: () => void;
   onAffiliationClick?: (affiliationId: string) => void;
+  isUpdatingAdmins: boolean;
 }
 
 function AffiliationItem({
@@ -58,6 +53,7 @@ function AffiliationItem({
   onEditAffiliation,
   refetch,
   onAffiliationClick,
+  isUpdatingAdmins,
 }: AffiliationItemProps) {
   // Change initial state to true
   const [isExpanded, setIsExpanded] = useState(true);
@@ -160,19 +156,32 @@ function AffiliationItem({
         </div>
       </div>
       <EditAdminDialog
+        key={affiliation._id}
         open={isEditingAdmin}
         onOpenChange={setIsEditingAdmin}
         currentAdmins={affiliation.users || []}
         onSubmit={(values) => {
-          onEditAdmin(affiliation._id, values.users);
+          onEditAdmin(
+            affiliation._id,
+            values.users.map((user) => user.value)
+          );
           setIsEditingAdmin(false);
         }}
+        isLoading={isUpdatingAdmins}
       />
       <EditAffiliationDialog
         open={isEditingAffiliation}
         onOpenChange={setIsEditingAffiliation}
-        currentAffiliation={affiliation}
-        affiliations={allAffiliations}
+        currentAffiliation={{
+          _id: affiliation._id,
+          name: affiliation.name,
+          parent: affiliation.parent,
+        }}
+        affiliations={allAffiliations.map((a) => ({
+          _id: a._id,
+          name: a.name,
+          parent: a.parent,
+        }))}
         onSuccess={() => {
           setIsEditingAffiliation(false);
           refetch();
@@ -181,7 +190,7 @@ function AffiliationItem({
       <CreateChildAffiliationDialog
         open={isAddingChild}
         onOpenChange={(open) => setIsAddingChild(open)}
-        parentAffiliation={affiliation}
+        parentAffiliation={{ _id: affiliation._id, name: affiliation.name }}
         refetch={refetch}
       />
       {isExpanded && hasChildren && (
@@ -198,6 +207,7 @@ function AffiliationItem({
               onEditAffiliation={onEditAffiliation}
               refetch={refetch}
               onAffiliationClick={onAffiliationClick}
+              isUpdatingAdmins={isUpdatingAdmins}
             />
           ))}
         </div>
@@ -216,9 +226,10 @@ export function AffiliationTree({ onAffiliationClick }: AffiliationTreeProps) {
       staleTime: 30000,
     });
 
-  const [creatingChildFor, setCreatingChildFor] = useState<Affiliation | null>(
-    null
-  );
+  const [creatingChildFor, setCreatingChildFor] = useState<Pick<
+    Affiliation,
+    "_id" | "name"
+  > | null>(null);
 
   const { mutate: deleteAffiliation } =
     tsr.affiliation.deleteAffiliation.useMutation({
@@ -233,12 +244,27 @@ export function AffiliationTree({ onAffiliationClick }: AffiliationTreeProps) {
       },
     });
 
+  const { mutate: updateAffiliationAdmins, isPending: isUpdatingAdmins } =
+    tsr.affiliation.editAffiliation.useMutation({
+      onSuccess: async () => {
+        toast.success("Administrators updated successfully");
+        await refetch();
+      },
+      onError: (error) => {
+        toast.error("Failed to update administrators", {
+          description: error.toString(),
+        });
+      },
+    });
+
   if (isLoading || error || !data || !data.body) {
     return <div>Unable to render data</div>;
   }
 
   // Get root level affiliations
-  const rootAffiliations = data.body.filter((a) => !a.parent);
+  const rootAffiliations = (data.body as Affiliation[]).filter(
+    (a: Affiliation) => !a.parent
+  );
 
   console.log("rootAffiliations:", rootAffiliations);
   console.log("affiliations:", data.body);
@@ -257,9 +283,13 @@ export function AffiliationTree({ onAffiliationClick }: AffiliationTreeProps) {
     }
   };
 
-  const handleEditAdmin = (id: string, users: User[]) => {
-    // In a real app, this would update the users in the database
-    console.log("Edit admins for:", id, users);
+  console.log("data.body:", data.body);
+
+  const handleEditAdmin = (id: string, users: string[]) => {
+    updateAffiliationAdmins({
+      params: { id },
+      body: { admins: users },
+    });
   };
 
   const handleEditAffiliation = (
@@ -274,17 +304,18 @@ export function AffiliationTree({ onAffiliationClick }: AffiliationTreeProps) {
     <>
       <div className="rounded-lg border">
         <div className="p-4">
-          {rootAffiliations.map((affiliation) => (
+          {rootAffiliations.map((affiliation: Affiliation) => (
             <AffiliationItem
               key={affiliation._id}
               affiliation={affiliation}
-              allAffiliations={data.body}
+              allAffiliations={data.body as Affiliation[]}
               onAddChild={(aff) => setCreatingChildFor(aff)}
               onDelete={handleDelete}
               onEditAdmin={handleEditAdmin}
               onEditAffiliation={handleEditAffiliation}
               refetch={refetch}
               onAffiliationClick={onAffiliationClick}
+              isUpdatingAdmins={isUpdatingAdmins}
             />
           ))}
         </div>
@@ -296,7 +327,10 @@ export function AffiliationTree({ onAffiliationClick }: AffiliationTreeProps) {
           onOpenChange={(open) => {
             if (!open) setCreatingChildFor(null);
           }}
-          parentAffiliation={creatingChildFor}
+          parentAffiliation={{
+            _id: creatingChildFor._id,
+            name: creatingChildFor.name,
+          }}
           refetch={refetch}
         />
       )}

@@ -175,11 +175,6 @@ class AffiliationMongoDbRepo implements AffiliationRepo {
   }
 
   private transformId(affiliation: Affiliation) {
-    if (affiliation.users) {
-      affiliation.users = affiliation.users.map((user) =>
-        transformObjectId(user)
-      );
-    }
     if (affiliation.authors) {
       affiliation.authors = affiliation.authors.map((author) =>
         transformObjectId(author)
@@ -276,7 +271,7 @@ class AffiliationMongoDbRepo implements AffiliationRepo {
       throw new createHttpError.NotFound();
     }
 
-    return doc.allUsers.map((user: any) => user.toString());
+    return doc.allUsers;
   }
 }
 
