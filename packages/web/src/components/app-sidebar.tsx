@@ -18,9 +18,16 @@ import {
   Copy,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { authClient } from "@/lib/auth-client";
+import { Button } from "@/components/ui/button";
 
 export function AppSidebar() {
   const nav = useNavigate();
+
+  const handleLogout = async () => {
+    await authClient.signOut();
+    nav("/login");
+  };
 
   return (
     <Sidebar>
@@ -77,7 +84,12 @@ export function AppSidebar() {
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter className="border-t p-4">
-        <div className="text-xs text-muted-foreground">Version 1.0.0</div>
+        <div className="flex flex-col gap-2 w-full">
+          <div className="text-xs text-muted-foreground">Version 1.0.0</div>
+          <Button variant="outline" className="w-full" onClick={handleLogout}>
+            Log out
+          </Button>
+        </div>
       </SidebarFooter>
     </Sidebar>
   );
