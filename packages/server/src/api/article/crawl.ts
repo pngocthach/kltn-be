@@ -81,7 +81,7 @@ async function handleArticleInsertion(
   // );
 
   if (isMatch) {
-    console.log(`>>>Article already exists: ${article.title}`);
+    // console.log(`>>>Article already exists: ${article.title}`);
     return {
       processedArticle: null,
       articleId: matchingArticle._id,
@@ -113,8 +113,10 @@ async function handleArticleInsertion(
 }
 
 export async function crawl(url: string, authorId: string) {
+  console.log(`>>>Crawling ${url} for authorId=${authorId}`);
   const browser = await puppeteer.launch({
     headless: false,
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
   });
   const page = await browser.newPage();
 
@@ -157,7 +159,7 @@ export async function crawl(url: string, authorId: string) {
         results.push(processedArticle);
       }
       if (!articleId) {
-        console.log(`>>>Article already exists: ${enrichedArticle.title}`);
+        // console.log(`>>>Article already exists: ${enrichedArticle.title}`);
       }
       if (articleId) {
         articleIdsToAdd.push(articleId);
@@ -178,6 +180,7 @@ export async function crawl(url: string, authorId: string) {
     return results;
   } catch (error) {
     await browser.close();
+    console.log(`Crawl error for authorId=${authorId}, url=${url}:`, error);
     throw error;
   }
 }
@@ -307,6 +310,10 @@ export async function createCrawlJob(
       createdAt: new Date(),
     };
   } catch (error) {
+    console.log(
+      `Create crawl job error for authorId=${authorId}, url=${url}:`,
+      error
+    );
     // If queue fails, update job status to failed
     await jobModel.updateOne(
       { _id: job.insertedId },

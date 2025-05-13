@@ -2,6 +2,8 @@ import { connectDB } from "@/configs/mongodb";
 import fs from "fs/promises";
 import stringSimilarity from "string-similarity";
 import { configModel } from "@/api/remote-config/config.model";
+import { crawlScopusByYear, crawlScopusByYears } from "./crawl-scopus-job";
+import express, { Request, Response } from "express";
 
 const db = await connectDB();
 const articleModel = db.collection("article");
@@ -33,10 +35,12 @@ console.log(">>> threshold:", await getThresholds());
 
 async function readScopusData(): Promise<ScopusArticle[]> {
   try {
-    const data = await fs.readFile("data/scopus_data.json", "utf8");
-    return JSON.parse(data);
+    // Fetch the current year by default, or customize as needed
+    const year = new Date().getFullYear();
+    const data = await crawlScopusByYear(year);
+    return data as ScopusArticle[];
   } catch (error) {
-    console.error("Error reading scopus_data.json:", error);
+    console.error("Error fetching Scopus data:", error);
     return [];
   }
 }
@@ -64,10 +68,12 @@ async function findSimilarScopusArticle(
     : null;
 }
 
-async function updateArticlesWithScopusIndex() {
+async function updateArticlesWithScopusIndex(scopusArticles?: ScopusArticle[]) {
   console.log("Starting Scopus index check...");
 
-  const scopusArticles = await readScopusData();
+  if (!scopusArticles) {
+    scopusArticles = await readScopusData();
+  }
   if (!scopusArticles.length) {
     console.error("No Scopus data available");
     return;
@@ -103,22 +109,6 @@ async function updateArticlesWithScopusIndex() {
                       "SCOPUS_ID:",
                       ""
                     ),
-                    // title: similarScopusArticle["dc:title"],
-                    // doi: similarScopusArticle["prism:doi"],
-                    // publicationName:
-                    //   similarScopusArticle["prism:publicationName"],
-                    // coverDate: similarScopusArticle["prism:coverDate"],
-                    // citationCount: parseInt(
-                    //   similarScopusArticle["citedby-count"],
-                    //   10
-                    // ),
-                    // affiliations: similarScopusArticle.affiliation.map(
-                    //   (aff) => ({
-                    //     name: aff.affilname,
-                    //     city: aff["affiliation-city"],
-                    //     country: aff["affiliation-country"],
-                    //   })
-                    // ),
                     checkedAt: new Date(),
                   }
                 : null,
@@ -133,17 +123,12 @@ async function updateArticlesWithScopusIndex() {
     }
   }
 
-  console.log(`
-    Scopus index check completed:
-    - Total articles processed: ${articles.length}
-    - Articles updated: ${updatedCount}
-    - Scopus matches found: ${matchCount}
-  `);
+  console.log(
+    `\n    Scopus index check completed:\n    - Total articles processed: ${articles.length}\n    - Articles updated: ${updatedCount}\n    - Scopus matches found: ${matchCount}\n  `
+  );
 }
 
 // Run the update
-import express from "express";
-
 const router = express.Router();
 
 router.get("/run-scopus-check", async (req, res) => {
@@ -157,6 +142,87 @@ router.get("/run-scopus-check", async (req, res) => {
     res.status(500).json({ error: "Error during Scopus index check" });
   }
 });
+
+router.post("/run-scopus-crawl", async (req: Request, res: Response) => {
+  try {
+    const mode = req.body.mode as string;
+    let years: number[] = [];
+
+    if (mode === "all") {
+      const startYear = 2000; // or your desired start year
+      const endYear = new Date().getFullYear();
+      years = Array.from(
+        { length: endYear - startYear + 1 },
+        (_, i) => startYear + i
+      );
+    } else if (mode === "current") {
+      years = [new Date().getFullYear()];
+    } else if (mode === "year" && Array.isArray(req.body.year)) {
+      years = (req.body.year as (string | number)[]).map((y) =>
+        typeof y === "string" ? parseInt(y, 10) : y
+      );
+    } else if (req.body.years) {
+      years = (req.body.year as (string | number)[]).map((y) =>
+        typeof y === "string" ? parseInt(y, 10) : y
+      );
+    } else {
+      res.status(400).json({ error: "Invalid mode or years parameter" });
+      return;
+    }
+
+    const results = await crawlScopusByYears(years);
+    res.status(200).json({
+      message: `Crawled ${results.length} results for years: ${years.join(
+        ", "
+      )}`,
+      years,
+      results,
+    });
+  } catch (error) {
+    console.error("Error during Scopus crawl:", error);
+    res.status(500).json({ error: "Error during Scopus crawl" });
+  }
+});
+
+router.post(
+  "/run-scopus-crawl-and-check",
+  async (req: Request, res: Response) => {
+    try {
+      const mode = req.body.mode as string;
+      let years: number[] = [];
+
+      if (mode === "all") {
+        const startYear = 2000; // or your desired start year
+        const endYear = new Date().getFullYear();
+        years = Array.from(
+          { length: endYear - startYear + 1 },
+          (_, i) => startYear + i
+        );
+      } else if (mode === "current") {
+        years = [new Date().getFullYear()];
+      } else if (mode === "year" && req.body.year) {
+        years = [parseInt(req.body.year as string)];
+      } else if (req.body.years) {
+        years = (req.body.years as string).split(",").map(Number);
+      } else {
+        res.status(400).json({ error: "Invalid mode or years parameter" });
+        return;
+      }
+
+      // Crawl and then update
+      const scopusArticles = await crawlScopusByYears(years);
+      await updateArticlesWithScopusIndex(scopusArticles as ScopusArticle[]);
+      res.status(200).json({
+        message: `Crawled and checked articles for years: ${years.join(", ")}`,
+        years,
+        count: scopusArticles.length,
+      });
+    } catch (error) {
+      console.error("Error during Scopus crawl and check:", error);
+      res.status(500).json({ error: "Error during Scopus crawl and check" });
+    }
+  }
+);
 
 export default router;
 

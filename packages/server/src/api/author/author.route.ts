@@ -53,7 +53,7 @@ const router = s.router(authorContract, {
       (affiliation) => affiliation.authors
     );
 
-    console.log(">>> permittedAuthorIds:", permittedAuthorIds);
+    // console.log(">>> permittedAuthorIds:", permittedAuthorIds);
 
     const authors = await authorModel
       .find({ _id: { $in: permittedAuthorIds } })
